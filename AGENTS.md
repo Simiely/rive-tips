@@ -47,6 +47,7 @@
 - 不写 token、本机绝对路径、账号邮箱
 - 未验证的内容不写进正文；确需提及就标"暂未收录"
 - 涉及数字（工具数、画板数、状态数）注明采集日期，Early Access 阶段会变
+- **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照。改任何 docs 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录），否则技能与文档漂移
 
 ## 常用命令
 
@@ -63,6 +64,9 @@ scripts/rive-audit.ps1 -OutFile audit.tsv
 
 # 导入 .rev（需先在编辑器里切到目标文件）
 scripts/rive-import.ps1 -TargetFileId 1234567 -RevPath D:\export\src.rev
+
+# docs 更新后同步技能快照（-Install 同时刷新 ~/.workbuddy/skills/rive-ops）
+tools/sync-skill.ps1 -Install
 ```
 
 ## 备注

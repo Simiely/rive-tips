@@ -89,3 +89,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 - `references/asset-import.md` —— Illustrator → SVG → Rive 全链路（含 COM 防呆）
 - `references/delivery.md` —— 导出规则、字体内嵌、验收清单
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
+
+## 6. 来源与同步
+
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；`references/` 对应仓库 `docs/`，`pitfalls.md` 即仓库的 `速查表.md`。
+- 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。

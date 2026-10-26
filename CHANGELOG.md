@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v1.1.1 — 2026-10-26
+
+Agent Skill 化 + 同步机制，防止技能与文档漂移。
+
+### 新增
+
+- `skills/rive-ops/` —— Agent Skill 包：SKILL.md（任务路由 + 15 条铁律 + 排障路由）+ 4 个实盘脚本 + 5 篇参考快照 + 运行时验收页；已安装于 `~/.workbuddy/skills/rive-ops/`
+- `tools/sync-skill.ps1` —— docs → 技能快照同步脚本（`-Install` 同时刷新安装目录）
+
+### 维护规则
+
+- `skills/rive-ops/references/` 是 `docs/` 的快照：**改 docs 后必须跑 `tools/sync-skill.ps1`**，否则技能漂移（AGENTS 约定与 README 已写入此规则）
+
 ## v1.1.0 — 2026-10-26
 
 实盘交付演练沉淀：`.ai` 素材导入链路 + `.riv` 导出规则 + 运行时验收。
