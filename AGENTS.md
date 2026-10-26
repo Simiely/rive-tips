@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-10-26 v1.1.0（commit `135b960`）—— 新增「AI素材导入链路」「导出规则与交付验收」两篇 + `ai-svg-export.ps1` + 运行时验收工具；关键坑补充 5 条（组件导出规则 / 字体 Embedded / SVG 文字转轮廓 / upload_asset data URI / 写入必回读）
+> 📌 **文档基线**：2026-10-26 v1.1.1（commit `1d12ba6`）—— Agent Skill `rive-ops` 化 + `tools/sync-skill.ps1` 同步机制；改 docs 后必须跑同步（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
