@@ -1,0 +1,17 @@
+# Rive CLI project build output
+build/
+
+# Local exports (.riv / .rev snapshots should not be committed)
+_export/
+*.rev
+*.riv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Logs
+*.log

@@ -1,0 +1,9 @@
+# Rive binary assets must never be line-ending converted (corrupts the file)
+*.riv binary
+*.rev binary
+*.png binary
+*.jpg binary
+*.webp binary
+
+# Default: normalize text
+* text=auto
