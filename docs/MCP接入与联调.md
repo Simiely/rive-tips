@@ -74,6 +74,9 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 5. **`upload_rev` 的 `target=open_file` 要求目标文件一块画板都没有**，否则报 `requires a file with no artboards` 并原样不动。先把画板删光。
 6. **`simulateStateMachine` 会还原它写入的值**，跑完文档不变——可以放心用来验证；但它**不渲染像素**，只能看 trace（进入的 state、走过的 transition、触发的事件）。
 7. **`export_file` 需要网络**。导出 `.rev` 时如果本机代理不通，会报 `HandshakeException: Connection terminated during handshake`——关掉系统代理再导。这个坑排查了很久，表现完全不像网络问题。
+8. **`upload_asset` 只认 data URI**。传本地文件路径会返回 `{"success":true,"asset":{"id":"0-0",...}}`——假 id，资产列表里也找不到，而 `success: true` 很有迷惑性。正确形态：`data:image/svg+xml;name=x.svg;base64,<...>`。**上传后必须 `listAssets` 复查**。
+9. **`capture_artboard` 存在"渲染失败家族"**：部分画板稳定输出纯黑或 403 `UNACCESSIBLE`，与内容无关（隐藏文字、重绑字体、改尺寸都不能解），疑似 Early Access 离屏渲染 bug。遇到黑屏先看**编辑器里**是否可见，别对着黑屏改数据。
+10. **批量 `set_property_values` 可能静默失败**：返回 `{"success":true,"values":{}}` 但实际没写入。所有写入必须**回读验证**；逐个写比批量稳。
 
 ## 五、联调套路
 

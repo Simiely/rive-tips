@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v1.1.0 — 2026-10-26
+
+实盘交付演练沉淀：`.ai` 素材导入链路 + `.riv` 导出规则 + 运行时验收。
+
+### 新增文档
+
+- `docs/AI素材导入链路.md` —— Illustrator COM 导出 SVG → 裁字体 → data URI 上传 → 放置验收；含 COM 防呆（DONTDISPLAYALERTS / Artboards 禁 foreach / OUTLINEFONT 静默失败）、"文字必须转轮廓"（Inter 兜底无 CJK，交叉验证 rive-flutter#338）
+- `docs/导出规则与交付验收.md` —— **`.riv` 只装「默认画板 + 组件画板」**（`includeInExport` 是假开关，判据是 `isComponent`，实测 33 画板 → 3362 B）；字体 Type 必须 Embedded（否则运行时中文永久豆腐）；运行时验收环境与无头截图命令
+
+### 新增脚本 / 工具
+
+- `scripts/ai-svg-export.ps1` —— 驱动运行中的 Illustrator 导出 SVG（精确文件名匹配、DONTDISPLAYALERTS、不保存关闭）
+- `tools/runtime-check/` —— 官方 webgl2 运行时验收页：列出 `.riv` 实际画板、渲染、报错；配 Edge 无头截图命令
+
+### 更新
+
+- `docs/MCP接入与联调.md`：实测行为补充 3 条（upload_asset data URI / capture 渲染失败家族 / 批量写入静默失败）
+- `docs/速查表.md`：坑位对照表 16 → 23 行
+- `AGENTS.md`：结论先行 10 → 15 条
+
 ## v1.0.0 — 2026-10-26
 
 首次建立。按 knowledge-base 单项目规范落地四件套 + 主题文档 + 验证脚本。

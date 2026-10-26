@@ -23,7 +23,12 @@
 7. **`animation_editor` 只认活动画板**，`data.artboardId` 被静默忽略。
 8. **判断交互画板能不能上机**：`inputs == 0 && dataBinds == 0 && animStates >= 2` → 代码驱动不了。
 9. **带脚本的 `.riv` 上 Web 必须 `--publish`**，未签名脚本被 CDN 拒绝。
-10. **`.gitattributes` 必须有 `*.riv binary`**，否则 Windows 换行转换会损坏文件。
+10. **`.gitattributes` 必须有 `*.riv binary`**，否则 Windows 换行转换会损坏文件
+11. **`.riv` 只装「默认画板 + 组件画板」**，其余画板连同动画/状态机被排除。画板的 `includeInExport` 属性**不是**导出开关（写入无效），判据是 `isComponent`。交付前必须核验，或每屏拆一个文件
+12. **字体 Type 必须是 Embedded**：编辑器里"等一会正常"是云端取字体；`.riv` 里没有字体数据时运行时中文**永久豆腐**
+13. **AI 导 SVG 给 Rive 前必须把文字转轮廓**：否则 Rive 按 font-family 落到内置 Inter 字体（无 CJK），中文全灭
+14. **`upload_asset` 只认 data URI**；传路径返回假 id `0-0`。**一切属性写入必须回读验证**（批量写入会静默失败）
+15. **Illustrator COM 第一行设 `DONTDISPLAYALERTS`**，否则弹窗挂死 COM；`Artboards` 集合禁止 foreach 枚举。
 
 ## FAQ 路由
 

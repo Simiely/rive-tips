@@ -16,7 +16,9 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 4 | [画板体检与交付整理](docs/画板体检与交付整理.md) | 说明书 ≠ 交付件：驱动入口缺失、命名撞车、尺寸差 1px、双份实现怎么查 |
 | 5 | [运行时选型与车机落地](docs/运行时选型与车机落地.md) | 四个 Web 包的取舍、Qt / Android / WebView 三条车机路线、上机前五项确认 |
 | 6 | [数据绑定与状态机驱动](docs/数据绑定与状态机驱动.md) | State Machine Input 与 ViewModel 两套模型、三个高频绑定坑、怎么验证交互真的会跳 |
-| 7 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
+| 7 | [AI 素材导入链路](docs/AI素材导入链路.md) | Illustrator 脚本导出 SVG → 文字转轮廓 → data URI 上传 → 放置验收，全链路防呆 |
+| 8 | [导出规则与交付验收](docs/导出规则与交付验收.md) | `.riv` 只装「默认画板+组件」、字体必须 Embedded、运行时验收才是判据 |
+| 9 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
 
 > 说明：颜色管理、音频事件、GPU Canvas / 3D、Flash 导入、Semantics 无障碍等主题，因未在本环境逐一验证，暂不收录，验证后再补。
 
@@ -36,6 +38,9 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | [`rive-mcp.ps1`](scripts/rive-mcp.ps1) | MCP 单次调用封装：`-Tool <工具名> -ArgsJson '<json>'`，图片可落盘 |
 | [`rive-audit.ps1`](scripts/rive-audit.ps1) | 遍历所有画板采集指纹，输出 TSV（体检 / 搬运后核验） |
 | [`rive-import.ps1`](scripts/rive-import.ps1) | `.rev` 整包导入：等待目标文件激活 → 清空画板 → 导入 → 报告 |
+| [`ai-svg-export.ps1`](scripts/ai-svg-export.ps1) | 驱动运行中的 Illustrator 导出 SVG（COM + 全部防呆），供 Rive 导入 |
+
+工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
 ## 三个最容易踩的坑
 

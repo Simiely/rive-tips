@@ -1,6 +1,11 @@
 # Rive CLI project build output
 build/
 
+# runtime-check local deps
+tools/runtime-check/node_modules/
+tools/runtime-check/package-lock.json
+tools/runtime-check/package.json
+
 # Local exports (.riv / .rev snapshots should not be committed)
 _export/
 *.rev
