@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Rive runtime check</title>
+<style>
+  body { margin:0; background:#101014; color:#e6e6e6; font:13px/1.5 Consolas, monospace; }
+  #wrap { display:flex; }
+  canvas { background:#1e1e22; }
+  #log { flex:1; padding:12px; white-space:pre-wrap; color:#9fe0a0; }
+  b { color:#ffd27f; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="900" height="700"></canvas>
+  <pre id="log"></pre>
+</div>
+<!-- 本地安装：npm i @rive-app/webgl2 后，把本页与 node_modules 放在同一目录 -->
+<script src="./node_modules/@rive-app/webgl2/rive.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const file = params.get('f') || 'test.riv';
+const logEl = document.getElementById('log');
+const log = (m) => { logEl.textContent += m + "\n"; };
+log('FILE: ' + file);
+
+window.addEventListener('error', (e) => log('WINDOW_ERROR: ' + e.message));
+
+// 列出 .riv 里实际包含的画板。
+// 这是交付验收的核心：编辑器能看见的画板，导出后未必存在。
+function dumpArtboards(r) {
+  try {
+    const c = r.contents;
+    if (!c) { log('contents: null'); return; }
+    let list = null;
+    if (typeof c.artboards === 'function') { list = c.artboards(); }
+    else if (Array.isArray(c.artboards)) { list = c.artboards; }
+    else if (typeof c.artboardCount === 'number') {
+      list = [];
+      for (let i = 0; i < c.artboardCount; i++) { list.push(c.artboard(i)); }
+    }
+    if (!list) {
+      log('CONTENTS_KEYS: ' + Object.keys(c).join(','));
+      log('PROTO: ' + Object.getOwnPropertyNames(Object.getPrototypeOf(c)).join(','));
+      return;
+    }
+    log('<b>ARTBOARD_COUNT: ' + list.length + '</b>');
+    list.forEach((a, i) => log('  #' + i + ' ' + a.name));
+    if (list.length === 0) {
+      log('!! 画板数为 0：检查画板是否标记为组件 / 是否为默认画板');
+    }
+  } catch (e) {
+    log('DUMP_ERROR: ' + e.message);
+  }
+}
+
+try {
+  const r = new rive.Rive({
+    src: file,
+    canvas: document.getElementById('c'),
+    autoplay: true,
+    onLoad: () => {
+      log('LOADED');
+      r.resizeDrawingSurfaceToCanvas();
+      dumpArtboards(r);
+    },
+    onLoadError: (e) => log('LOAD_ERROR: ' + JSON.stringify(e)),
+    onPlay: () => log('PLAYING')
+  });
+  log('instance created');
+} catch (e) {
+  log('INIT_ERROR: ' + e.message);
+}
+</script>
+</body>
+</html>

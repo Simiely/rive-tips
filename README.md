@@ -42,6 +42,8 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个脚本 + 5 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。
+
 ## 三个最容易踩的坑
 
 1. **导出 `.rev` 时被系统代理掐死** —— 报 `HandshakeException`，看起来完全不像网络问题。关代理再来。
