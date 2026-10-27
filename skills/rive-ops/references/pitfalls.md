@@ -116,6 +116,9 @@
 | **打组后缩放跑偏** | `group_editor` 的组原点落在 `objectIds` 第一个对象上 | 把**卡片放第一个**，组原点正好是按钮中心 |
 | **批量复制位置全乱** | `duplicate_objects` 一次传多个 ID，副本全部成为最后一个对象的兄弟 | 逐个复制，或复制后逐个 `reparent_objects` |
 | **浅色画板开关和深色联动** | ViewModel 实例被两个画板共用 | 每个画板建独立实例并 `bindViewModelToArtboard`；脚本是文档级的，可以复用 |
+| **PowerShell 调 MCP 报 `Invalid JSON primitive`** | `-File` 传参把 JSON 双引号吞了，不是服务没起 | 批量改用 `scripts/rive_mcp.py`，dict 传参并复用 session（[详见](MCP接入与联调.md)） |
+| **`git push` 报 `No anonymous write access`** | `GH_TOKEN` 失效或凭据管理器里没有 GitHub 凭据 | 走 `127.0.0.1:7890` 代理；临时把 token 写进 remote URL 推送，**推完立刻恢复 URL 并撤销 token** |
+| **`git push` 直连超时** | github.com:443 无法直连 | 只给这条命令加 `HTTPS_PROXY=http://127.0.0.1:7890`，不要永久写进 git config |
 | **COM 调 Illustrator 挂死** | 未屏蔽弹窗 | ExtendScript 第一行设 `DONTDISPLAYALERTS`（[详见](AI素材导入链路.md)） |
 
 ## 八、画板指纹（核验口径）

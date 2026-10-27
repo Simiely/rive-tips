@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.3.4 — 2026-10-27
+
+补齐工具链经验：MCP 调用封装与 GitHub 推送。
+
+### 更新
+
+- `scripts/rive_mcp.py`：Python MCP 客户端，dict 传参 + 复用 session，替代 PowerShell 传 JSON
+- `docs/MCP接入与联调.md`：新增「调用封装：别用 PowerShell 传 JSON」
+- `docs/速查表.md`：新增 3 条（PowerShell 引号被吞、push 认证失败、push 直连超时）
+
 ## v1.3.3 — 2026-10-27
 
 浅色主题 Artboard 2 接入同一套按钮动效。

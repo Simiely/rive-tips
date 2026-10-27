@@ -95,6 +95,20 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 
 第 ③ 步和第 ④ 步是分开的，别混：截图证明**看起来对**，模拟证明**跑起来对**。一个绑定接错属性、或者图形画了但透明，前两步都过得去。
 
+### 调用封装：别用 PowerShell 传 JSON
+
+`scripts/rive-mcp.ps1` 做单次调用没问题，但 PowerShell `-File` 传参时会**吞掉 JSON 里的双引号**，服务端报 `Invalid JSON primitive: xxx`，看起来像连接失败。批量操作改用 `scripts/rive_mcp.py`：
+
+```python
+from rive_mcp import connect, call_text
+sid = connect()
+call_text("query_property_values", {"propertyKeys": {"15-1": [7, 8]}}, sid)
+```
+
+- 一次 `connect()` 复用同一个 session，几十次调用不用反复握手
+- 参数是 Python dict，不存在引号转义问题
+- 返回值直接 `json.loads`，便于按 id 建索引、批量生成关键帧
+
 ## 六、局限
 
 - 不能跨文件操作，不能开关文件
