@@ -65,6 +65,7 @@ Write-Output ("DONE " + $done + " docs + 1 asset. Skill snapshot is up to date."
 
 if ($Install) {
     $target = Join-Path $env:USERPROFILE '.workbuddy\skills\rive-ops'
-    Copy-Item $skill $target -Recurse -Force
+    if (-not (Test-Path $target)) { New-Item -ItemType Directory -Path $target -Force | Out-Null }
+    Copy-Item (Join-Path $skill '*') $target -Recurse -Force
     Write-Output ('INSTALLED -> ' + $target)
 }
