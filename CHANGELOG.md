@@ -7,6 +7,7 @@
 ### 更新
 
 - `docs/按钮开关与按压动效.md`：新增「浅色主题变体（Artboard 2）」，含配色对照、扁平矢量打组法、按填充做颜色关键帧、独立 ViewModel 实例
+- `docs/速查表.md`：新增 4 条（浅色主题按填充变色、打组原点、批量复制父级、跨画板 ViewModel 实例）
 - `skills/rive-ops/references/toggle-button.md`：同步
 
 ### 实测数据

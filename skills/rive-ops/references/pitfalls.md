@@ -112,6 +112,10 @@
 | **多个按钮只能一个激活** | 所有按钮塞在同一个状态机 Layer | 一按钮一层；每层 Idle / Activating / Deactivating |
 | **点击切换没反应** | opacity 0 浮层不命中 / 监听器挂错 | 监听器挂 Shape；必要时加透明命中层；脚本类型必须 listenerAction |
 | **面板 Not Found 不一定缺数据** | 后端缩略图/资产记录状态 | 用 `.rev` 拆解验证数据；渲染/导出正常就保留 |
+| **浅色主题按钮激活后不变色** | 扁平矢量没有文字对象，颜色分散在卡片和每个图标/轮廓填充上 | 按填充逐个做颜色关键帧：卡片 `#141a1a1a↔#ffd96b2b`、图标/文字 `#a61a1a1a↔#ffffffff`（[详见](按钮开关与按压动效.md)） |
+| **打组后缩放跑偏** | `group_editor` 的组原点落在 `objectIds` 第一个对象上 | 把**卡片放第一个**，组原点正好是按钮中心 |
+| **批量复制位置全乱** | `duplicate_objects` 一次传多个 ID，副本全部成为最后一个对象的兄弟 | 逐个复制，或复制后逐个 `reparent_objects` |
+| **浅色画板开关和深色联动** | ViewModel 实例被两个画板共用 | 每个画板建独立实例并 `bindViewModelToArtboard`；脚本是文档级的，可以复用 |
 | **COM 调 Illustrator 挂死** | 未屏蔽弹窗 | ExtendScript 第一行设 `DONTDISPLAYALERTS`（[详见](AI素材导入链路.md)） |
 
 ## 八、画板指纹（核验口径）
