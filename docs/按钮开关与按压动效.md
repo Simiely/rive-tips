@@ -298,6 +298,31 @@ Deactivating ──(bool == true)──> Activating
 - 主驾加热 / 主驾通风：复用原橙点，按初始激活接入；`simulateStateMachine` 关闭/再开分别命中 Deactivating/Activating；关闭态底色 42/255、激活态 67/255（与其它按钮一致）。
 - MCP 无 pointer 模拟，真实点击在预览里验证。
 
+## 八、浅色主题变体（Artboard 2）
+
+浅色画板是 SVG 扁平导入：没有按钮组、没有文本对象，每个按钮由「卡片 Shape + 若干图标 Shape + 文字轮廓 Shape」组成。动效参数完全一致，只有颜色不同。
+
+| 项目 | 深色（Artboard 1） | 浅色（Artboard 2） |
+|---|---|---|
+| 未激活卡片 | `#14e6e6e6` | `#141a1a1a` |
+| 激活卡片 | `#33e6e6e6` + 橙点 | `#ffd96b2b` 整卡变橙，**没有橙点** |
+| 图标/文字 | 原本浅色 | 未激活 `#a61a1a1a`，激活 `#ffffffff` |
+| 次要部件 | — | 激活 `#99ffffff`，未激活 `#a61a1a1a` |
+| 按压浮层 | `B4B4B4` 35% | 同左（设计文档写的是全局统一） |
+
+做法：
+
+1. **按位置聚类再打组**。卡片中心就是按钮中心；图标在中心上方约 56、文字轮廓在下方约 66。`group_editor` 的 `objectIds` **卡片放第一个**，组原点会落在第一个对象上，正好是按钮中心；顺序保持「文字、图标、卡片」，渲染逐像素不变。
+2. 组内复制卡片 → `PressOverlay_<KEY>_L`，`#B4B4B4`、opacity 0、`sendToFront`。
+3. 两条 30 帧动画除了缩放/浮层，还要按每个填充做颜色关键帧：卡片 `#141a1a1a ↔ #ffd96b2b`，所有图标/文字填充 `#a61a1a1a ↔ #ffffffff`（`#99ffffff` 的部件回到 `#a61a1a1a`）。
+4. **每个画板一个独立 ViewModel 实例**：`createViewModelInstances` 建 `Artboard2`，蓝牙/加热/通风初始 `true`，再 `bindViewModelToArtboard` 绑定到浅色画板，避免和深色画板互相影响。
+5. 状态机是画板级的：在 `15-1607` 里建 12 个 `AB2_<KEY>_Layer`，初始激活用 `IdleActive`，其余用 `Idle`；空时间轴可复用画板自带的空动画。
+6. toggle 脚本是文档级的，**12 个脚本直接复用**，只需在新的状态机里挂监听器。
+
+排除项：3D桌面、壁纸桌面是导航；两条音量/亮度滑块不是开关，不做。
+
+实测：12 个按钮打组后渲染差异 0 像素；`simulateStateMachine` 无线网络/全车锁激活命中 `Activating`，蓝牙/主驾加热关闭命中 `Deactivating`；手动置色后激活态与设计稿一致（橙卡+白字），关闭态与其它未激活按钮一致。
+
 ## 来源
 
 - [Rive Listener Action Scripts](https://rive.app/docs/scripting/protocols/listener-action-scripts)

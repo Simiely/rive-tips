@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v1.3.3 — 2026-10-27
+
+浅色主题 Artboard 2 接入同一套按钮动效。
+
+### 更新
+
+- `docs/按钮开关与按压动效.md`：新增「浅色主题变体（Artboard 2）」，含配色对照、扁平矢量打组法、按填充做颜色关键帧、独立 ViewModel 实例
+- `skills/rive-ops/references/toggle-button.md`：同步
+
+### 实测数据
+
+- 12 个按钮打组 + 浮层后，待机渲染差异 0 像素
+- `simulateStateMachine`：无线网络/全车锁 → Activating，蓝牙/主驾加热 → Deactivating
+- 激活态橙卡 `#ffd96b2b` + 白字，关闭态与其它未激活按钮一致
+- 状态机 15-1607 共 12 层，监听器 12 个，脚本全部复用
+
 ## v1.3.2 — 2026-10-27
 
 主驾加热 / 主驾通风接入开关效果。
