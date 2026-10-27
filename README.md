@@ -18,7 +18,8 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 6 | [数据绑定与状态机驱动](docs/数据绑定与状态机驱动.md) | State Machine Input 与 ViewModel 两套模型、三个高频绑定坑、怎么验证交互真的会跳 |
 | 7 | [AI 素材导入链路](docs/AI素材导入链路.md) | Illustrator 脚本导出 SVG → 文字转轮廓 → data URI 上传 → 放置验收，全链路防呆 |
 | 8 | [导出规则与交付验收](docs/导出规则与交付验收.md) | `.riv` 只装「默认画板+组件」、字体必须 Embedded、运行时验收才是判据 |
-| 9 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
+| 9 | [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md) | 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化 72 MB → 2 MB |
+| 10 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
 
 > 说明：颜色管理、音频事件、GPU Canvas / 3D、Flash 导入、Semantics 无障碍等主题，因未在本环境逐一验证，暂不收录，验证后再补。
 
@@ -42,7 +43,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
-Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个脚本 + 5 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照）。
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个脚本 + 6 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照）。
 
 ## 三个最容易踩的坑
 
@@ -64,5 +65,6 @@ Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打�
 - **想从零用代码生成动效 / 进 Git** → [CLI 与 RML 工作流](docs/CLI与RML工作流.md)
 - **画板要搬到另一个文件** → [跨文件搬运画板](docs/跨文件搬运画板.md)
 - **动效要交给开发上机了** → [画板体检与交付整理](docs/画板体检与交付整理.md)
+- **打开文件很慢 / 素材字体一直转圈** → [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md)
 - **不确定选哪个运行时** → [运行时选型与车机落地](docs/运行时选型与车机落地.md)
 - **交互做了但代码驱动不了** → [数据绑定与状态机驱动](docs/数据绑定与状态机驱动.md)

@@ -30,6 +30,13 @@
 
 拆文件还有个隐藏收益：`.riv` 只装「默认画板 + 组件」，天然就把规范板、废弃板挡在包外，不用逐个清理。
 
+## 二·补、编辑器加载 ≠ 交付体积
+
+- 桌面编辑器每次打开都从云端拉全量资产，**没有素材磁盘缓存**；`.riv` 导出只装「默认画板 + 组件画板」。
+- 字体 `Include`（All glyphs / Glyphs used / Custom）只影响 `.riv` 导出，不改变编辑器加载；编辑器仍用源字体文件。
+- 编辑器打开慢：先做资产审计、删未使用资产，再按需字体子集化（[性能诊断与资产瘦身](性能诊断与资产瘦身.md)）。
+- `.rev`（`embed_assets: true`）可当体积取证：PNG 签名/IHDR、TTF 表目录能拆出真实 payload。
+
 ## 三、字体内嵌（车机离线的生死线）
 
 字体资产的三种 Type（[官方 Assets 文档](https://rive.app/docs/editor/fundamentals/assets-overview)）：

@@ -1,6 +1,6 @@
 ---
 name: rive-ops
-description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, exporting .riv deliverables, auditing artboards, or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
+description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, exporting .riv deliverables, auditing artboards, diagnosing slow file loads / asset bloat / font loading, or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
 agent_created: true
 ---
 
@@ -28,6 +28,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | Illustrator 素材导入 | `scripts/ai-svg-export.ps1` → 裁 `<font>` → data URI 上传 → `addSvgInstance` | `references/asset-import.md` |
 | 导出 `.riv` 交付 | Publish 导出 → 组件规则 → 字体 Embedded → 运行时验收 | `references/delivery.md` |
 | 运行时验收 | `assets/runtime-check-index.html` + 本地静态服务器 + Edge 无头截图 | `references/delivery.md` |
+| 打开慢 / 素材字体转圈 / 资产瘦身 | `listAssets` → 图片 `206` / 字体 `279` 审计 → `delete_objects` 删未使用 → fontTools 子集化 | `references/performance.md` |
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
@@ -46,6 +47,9 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 13. `.gitattributes` 必须有 `*.riv binary`。
 14. 交互画板判据：`inputs == 0 && dataBinds == 0 && animStates >= 2` → 代码驱动不了。
 15. PowerShell 5.1 读无 BOM 的 UTF-8 脚本会按 ANSI 解析——脚本输出用 ASCII，中文结果写文件再看。
+16. 桌面编辑器**没有素材磁盘缓存**；每次打开从云端拉全量资产。打开慢先做资产审计，不要先改 DNS 或装系统字体。
+17. `delete_objects` 也能删**资产 ID**（实测）；`upload_asset` 重名返回假 `0-0`，换唯一名后再用属性键 `203` 改名；幽灵 `0-0` 重启后消失。
+18. 字体一直转圈 / Not Found 先验证字体文件；旧资产记录卡住时重传/子集化。子集化后必须校验字符覆盖、回读 `279`、截图对比，并保留全量字体 `.rev`。
 
 ## 3. 脚本速用
 
@@ -78,16 +82,21 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | `.riv` 画板数比源文件少 | 组件规则（7），拆文件或标组件 |
 | 层级顺序不对 | 后添加垫底——删掉重加（`reorder_objects` 的 order 枚举未文档化） |
 | 写入"成功"但没生效 | 回读验证；逐个写 |
+| 打开文件慢 / 素材转圈 | 无磁盘缓存；先资产审计，删未使用，必要时字体子集化（`references/performance.md`） |
+| 字体一直转圈 / Not Found | 旧资产记录卡住；fontTools 验证后重传/子集化；不要改 DNS |
+| 本机装同名字体无效 | 编辑器只用 Google Fonts / 上传字体；本地字体仅 CLI 项目可用 |
+| 要删未使用资产 | `delete_objects` 传资产 ID；删前备份 `.rev`，删后回读 `206`/`279` |
 
-完整 23 行对照表：`references/pitfalls.md`。
+完整 30 行对照表：`references/pitfalls.md`。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/23 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/30 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/transfer.md` —— 跨文件搬运全流程与核验
 - `references/asset-import.md` —— Illustrator → SVG → Rive 全链路（含 COM 防呆）
 - `references/delivery.md` —— 导出规则、字体内嵌、验收清单
+- `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步

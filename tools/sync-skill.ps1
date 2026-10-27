@@ -13,6 +13,7 @@
         导出规则与交付验收.md    -> delivery.md
         跨文件搬运画板.md       -> transfer.md
         MCP接入与联调.md        -> mcp.md
+        性能诊断与资产瘦身.md    -> performance.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     -Install also refreshes the installed skill at
@@ -41,6 +42,7 @@ $map = [ordered]@{
     '导出规则与交付验收.md'  = 'delivery.md'
     '跨文件搬运画板.md'      = 'transfer.md'
     'MCP接入与联调.md'      = 'mcp.md'
+    '性能诊断与资产瘦身.md'  = 'performance.md'
 }
 
 $done = 0
