@@ -43,6 +43,7 @@ $map = [ordered]@{
     '跨文件搬运画板.md'      = 'transfer.md'
     'MCP接入与联调.md'      = 'mcp.md'
     '性能诊断与资产瘦身.md'  = 'performance.md'
+    '按钮开关与按压动效.md'  = 'toggle-button.md'
 }
 
 $done = 0

@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v1.3.0 — 2026-10-27
+
+按钮开关与按压动效：单图标 toggle + 一按钮一层。
+
+### 新增文档
+
+- `docs/按钮开关与按压动效.md` —— 500ms 总时长（按下 200ms + 抬起 300ms）、Quart-2/ease、浮层/橙点、Listener Action Script toggle、ViewModel、一按钮一层状态机、初始激活态处理
+
+### 更新
+
+- `docs/速查表.md`：新增 3 条按压/多按钮坑位（30 → 33 行）
+- `README.md`：主题 10 → 11，技能参考 6 → 7 篇
+- `AGENTS.md`：结论先行 18 → 21 条，新增按钮动效路由
+- `skills/rive-ops`：新增 `references/toggle-button.md`，SKILL.md 增加路由、3 条铁律与参考
+- `tools/sync-skill.ps1`：新增按钮文档 → toggle-button.md 映射
+
+### 实测数据
+
+- 屏幕清洁：按下 200ms、抬起 300ms、总 500ms；simulate 激活 33 帧完成、取消 52 帧完成
+- 待机截图与修改前逐像素一致；激活态底色/橙点与主驾加热一致
+- `screen_clean_toggle` 脚本诊断 `[]`，click listener 绑定浮层
+
 ## v1.2.0 — 2026-10-27
 
 性能诊断与资产瘦身：实测 72.2 MiB → 2.09 MiB。

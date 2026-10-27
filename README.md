@@ -19,7 +19,8 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 7 | [AI 素材导入链路](docs/AI素材导入链路.md) | Illustrator 脚本导出 SVG → 文字转轮廓 → data URI 上传 → 放置验收，全链路防呆 |
 | 8 | [导出规则与交付验收](docs/导出规则与交付验收.md) | `.riv` 只装「默认画板+组件」、字体必须 Embedded、运行时验收才是判据 |
 | 9 | [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md) | 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化 72 MB → 2 MB |
-| 10 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
+| 10 | [按钮开关与按压动效](docs/按钮开关与按压动效.md) | 单图标 toggle：500ms = 200ms 按下 + 300ms 抬起、B4B4B4 35% 浮层、橙点、Listener Action Script、一按钮一层 |
+| 11 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
 
 > 说明：颜色管理、音频事件、GPU Canvas / 3D、Flash 导入、Semantics 无障碍等主题，因未在本环境逐一验证，暂不收录，验证后再补。
 
@@ -43,7 +44,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
-Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个脚本 + 6 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照）。
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个脚本 + 7 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照）。
 
 ## 三个最容易踩的坑
 
