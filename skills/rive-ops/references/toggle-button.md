@@ -216,6 +216,15 @@ Deactivating ──(bool == true)──> Activating
   - `Activating → Deactivating`：bool == false
 - 不要建 `IdleActive → Activating`，否则会从激活态又播一次激活。
 
+### 9. 带档位条的按钮（主驾加热 / 主驾通风）
+
+这类按钮图标下方有 3 格档位条，视觉上已经是激活态，但用户只要求开关效果：
+
+- 按「初始激活」处理：`IdleActive`、ViewModel 初始 `true`；
+- 橙点是原设计里已有且常亮的 Shape（主驾加热 `15-551`、主驾通风 `15-418`，局部 `(86,-86)`），**直接动画它的 opacity**，不新建；
+- 3 格档位条保持设计稿现状，不参与动画（不做档位切换）；
+- 背景 SolidColor 分别是 `15-712`、`15-550`，浮层从背景复制后固定 `#ffb4b4b4`。
+
 ## 四、验证
 
 1. **时长**：动画 fps 60、duration 30、loop 0；`simulateStateMachine` 激活应约 30 帧完成。
@@ -286,6 +295,7 @@ Deactivating ──(bool == true)──> Activating
 - 蓝牙（初始激活）+ 无线网络、热点、专注模式、一键静音、系统清理、离车不下电、加油口盖、全车锁共 9 个按钮批量接入，状态机共 10 层。
 - 9 个 toggle 脚本诊断均为 `[]`；`simulateStateMachine` 单按钮激活/取消激活均命中对应 Layer。
 - 9 按钮改完后待机截图与改前**逐像素一致**（bbox 为空，0 差异像素），激活态统一为 `#33e6e6e6` + 橙点。
+- 主驾加热 / 主驾通风：复用原橙点，按初始激活接入；`simulateStateMachine` 关闭/再开分别命中 Deactivating/Activating；关闭态底色 42/255、激活态 67/255（与其它按钮一致）。
 - MCP 无 pointer 模拟，真实点击在预览里验证。
 
 ## 来源
