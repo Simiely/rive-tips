@@ -253,6 +253,19 @@ Deactivating ──(bool == true)──> Activating
 8. 建独立 Layer + 三个状态 + 四条转换 + 三个条件；
 9. 逐按钮 simulate + 截图。
 
+### 批量执行时的 API 陷阱（9 按钮实测）
+
+| 环节 | 陷阱 | 正确做法 |
+|---|---|---|
+| 复制浮层 | `duplicate_objects` 一次传多个 ID 时，**所有副本都被塞到最后一个对象的父级** | 复制后逐个 `reparent_objects` 回各自按钮组 |
+| 复制橙点 | 同一个 ID 重复写 8 次，只生成 **1 个副本**（自动去重） | 一次传一个 ID，循环调用 |
+| 颜色关键帧 | 动画目标误写成浮层的 SolidColor，激活时底色不变 | 目标必须是**背景 Shape 的 SolidColor**；浮层 SolidColor 固定 `#ffb4b4b4` |
+| 脚本类型 | `manage_scripts create` 后 `get_scripts` 显示 `utility` | 必须跑一次 `recompile_all_scripts`，才会识别成 `listenerAction` |
+| 入口转换 | `createStateMachineLayers` 不建 Entry→初始状态 | 查询 Layer 拿 `entryStateId`，再 `createTransitions` 补一条 |
+| 初始激活 | 只把底色画成激活，ViewModel 仍为 false | 实例属性对象（`ViewModelInstanceBoolean`）的 `propertyvalue` 键是 `593`，用 `set_property_values` 置 true |
+| 模拟链 | `simulateStateMachine` 在动画结束即 `settled` 停止，之后的输入不再执行 | 两段式验证：①单次 true 看 Activating；②在动画中途改回 false 看 Deactivating |
+| 截图取样 | 截图尺寸 = `longEdge / artboardWidth`（本画板 2560×1440，longEdge 1536 → 0.6） | 取样前先算比例，否则会读到按钮间隙而误判没生效 |
+
 ## 六、坑位
 
 | 现象 | 原因 | 处理 |
@@ -270,6 +283,9 @@ Deactivating ──(bool == true)──> Activating
 - 屏幕清洁：按下 200ms、抬起 300ms、总 500ms；待机截图与修改前一致；激活态底色/橙点与主驾加热一致。
 - `simulateStateMachine`：激活约 33 帧完成，取消激活约 52 帧完成。
 - 脚本 `screen_clean_toggle` 诊断 `[]`，监听器 `2-802` 绑定在浮层 `2-193` 上。
+- 蓝牙（初始激活）+ 无线网络、热点、专注模式、一键静音、系统清理、离车不下电、加油口盖、全车锁共 9 个按钮批量接入，状态机共 10 层。
+- 9 个 toggle 脚本诊断均为 `[]`；`simulateStateMachine` 单按钮激活/取消激活均命中对应 Layer。
+- 9 按钮改完后待机截图与改前**逐像素一致**（bbox 为空，0 差异像素），激活态统一为 `#33e6e6e6` + 橙点。
 - MCP 无 pointer 模拟，真实点击在预览里验证。
 
 ## 来源
