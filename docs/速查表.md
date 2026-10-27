@@ -114,7 +114,8 @@
 | **面板 Not Found 不一定缺数据** | 后端缩略图/资产记录状态 | 用 `.rev` 拆解验证数据；渲染/导出正常就保留 |
 | **浅色主题按钮激活后不变色** | 扁平矢量没有文字对象，颜色分散在卡片和每个图标/轮廓填充上 | 按填充逐个做颜色关键帧：卡片 `#141a1a1a↔#ffd96b2b`、图标/文字 `#a61a1a1a↔#ffffffff`（[详见](按钮开关与按压动效.md)） |
 | **打组后缩放跑偏** | `group_editor` 的组原点落在 `objectIds` 第一个对象上 | 把**卡片放第一个**，组原点正好是按钮中心 |
-| **批量复制位置全乱** | `duplicate_objects` 一次传多个 ID，副本全部成为最后一个对象的兄弟 | 逐个复制，或复制后逐个 `reparent_objects` |
+| **批量复制位置全乱** | `duplicate_objects` 一次传多个 ID，副本全部成为最后一个对象的兄弟；且只返回数量不给 id | 逐个复制，或复制后逐个 `reparent_objects`；新 id 回读父级 `children` 找 |
+| **`addProperties` 报 `viewModels must be an array`** | 参数不是 `viewModelId` 平铺，而是 `data.addProperties.viewModels[]` | 每次可批量传多个 ViewModel，属性一次加完 |
 | **浅色画板开关和深色联动** | ViewModel 实例被两个画板共用 | 每个画板建独立实例并 `bindViewModelToArtboard`；脚本是文档级的，可以复用 |
 | **PowerShell 调 MCP 报 `Invalid JSON primitive`** | `-File` 传参把 JSON 双引号吞了，不是服务没起 | 批量改用 `scripts/rive_mcp.py`，dict 传参并复用 session（[详见](MCP接入与联调.md)） |
 | **`git push` 报 `No anonymous write access`** | `GH_TOKEN` 失效或凭据管理器里没有 GitHub 凭据 | 走 `127.0.0.1:7890` 代理；临时把 token 写进 remote URL 推送，**推完立刻恢复 URL 并撤销 token** |

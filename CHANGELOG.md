@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v1.3.5 — 2026-10-27
+
+速查表补齐两个 API 形态坑。
+
+### 更新
+
+- `docs/速查表.md`：`duplicate_objects` 只返回数量、需回读父级找新 id；`addProperties` 的参数结构是 `viewModels[]`
+
 ## v1.3.4 — 2026-10-27
 
 补齐工具链经验：MCP 调用封装与 GitHub 推送。
