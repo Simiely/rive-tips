@@ -67,7 +67,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 
 这些是踩出来的，写工具说明里没有：
 
-1. **只能操作当前活动文件**。没有"打开另一个文件"的工具，也没有跨文件复制。想搬内容只能走 `.rev`（见 [跨文件搬运画板](跨文件搬运画板.md)）。
+1. **只能操作当前活动文件**。没有"打开另一个文件"的工具，也没有跨文件复制。想搬内容只能走 `.rev`（见 [跨文件搬运画板](transfer.md)）。
 2. **`animation_editor` 只作用于活动画板**，传 `data.artboardId` 会被**静默忽略**——三个不同画板传同一个 id，返回的是同一个状态机。要查别的画板必须先 `focusArtboard`。
 3. **`capture_artboard` 对未激活的画板返回空白图**，连 `backgroundColor` 都不生效。先 `focusArtboard` 再抓。
 4. **`export_file` 的 `destination` 传目录，不是文件路径**。传 `...\out\a.rev` 会报 `destination directory is not usable`；传 `...\out` 才对，文件名由 App 决定。
@@ -79,7 +79,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 10. **批量 `set_property_values` 可能静默失败**：返回 `{"success":true,"values":{}}` 但实际没写入。所有写入必须**回读验证**；逐个写比批量稳。
 11. **`delete_objects` 也能删资产 ID**：把 `assets_tool/listAssets` 返回的资产 id 传进去即可，官方文档只写“删对象”。删前导 `.rev` 备份，删后回读 `206`/`279` 核验；假 `0-0` 幽灵条目删不掉，重启 App 后消失。
 12. **`upload_asset` 重名会返回假 `0-0`**（data URI 也一样）：先传唯一名，再用属性键 `203` 改回原名；上传后 `listAssets` 复查。
-13. **字体资产也是“对象”**：`TextStylePaint.fontassetid=279`、资产名 `203`、导出类型 `358`、Include `360`、CDN `362`/`359`；`size=211` 恒为 0。字体子集化与重绑见 [性能诊断与资产瘦身](性能诊断与资产瘦身.md)。
+13. **字体资产也是“对象”**：`TextStylePaint.fontassetid=279`、资产名 `203`、导出类型 `358`、Include `360`、CDN `362`/`359`；`size=211` 恒为 0。字体子集化与重绑见 [性能诊断与资产瘦身](performance.md)。
 14. **面板 `Not Found`/转圈不等于数据缺失**：先用 `export_file(rev, embed_assets=true)` 拆包验证；旧资产记录卡住时重传同字形/子集化，不要改 DNS 或反复重传。
 
 ## 五、联调套路
@@ -113,7 +113,7 @@ call_text("query_property_values", {"propertyKeys": {"15-1": [7, 8]}}, sid)
 
 - 不能跨文件操作，不能开关文件
 - 不能按名字取状态机输入以外的东西——很多 API 要 objectId
-- **`stateMachineInputs` 类交互和 ViewModel 是两套模型**，读的时候要先分清（见 [数据绑定与状态机驱动](数据绑定与状态机驱动.md)）
+- **`stateMachineInputs` 类交互和 ViewModel 是两套模型**，读的时候要先分清（见 [数据绑定与状态机驱动](binding.md)）
 - Early Access，工具名和参数都可能变；脚本里别硬编码能力假设
 
 ## 来源

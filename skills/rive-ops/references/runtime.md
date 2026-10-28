@@ -1,0 +1,113 @@
+# 运行时选型与车机落地
+
+**TL;DR**：`.riv` 是唯一产物，同一份文件在编辑器、网页、移动端、车机上跑的是同一个东西。选型的核心不是"哪个平台支持"，而是**哪个渲染器**——`Rive Renderer` 保真度最高，平台自带的渲染器性能更好但功能有取舍。
+
+> 更新时间：2026-10-26 ｜ 依据：Rive 官方运行时文档
+
+## 一、先分清两件事
+
+| | 是什么 | 谁来做 |
+|---|---|---|
+| 编辑器 / CLI | 产出 `.riv` | 设计侧 |
+| 运行时（runtime） | 加载 `.riv` 并渲染、接收输入 | 开发侧 |
+
+运行时都是开源的、MIT 许可、无版税。开发侧**不重写动效**，只加载文件 + 绑数据。
+
+这也意味着：**动效的修改不应该触发代码改动**。如果每次调时长都要发版，说明接入方式有问题（通常是没走数据绑定，把参数写死在代码里）。
+
+## 二、Web 端的四个包
+
+| 包 | 渲染器 | 什么时候用 |
+|---|---|---|
+| `@rive-app/webgl2` | **Rive Renderer**（WebGL2） | 默认选它。和编辑器同一个渲染器，支持 Vector Feathering 等全部特性 |
+| `@rive-app/canvas` | 浏览器 Canvas2D | 同屏实例多、或文件不用 Rive 专有特性时；无 WebGL 上下文数量限制 |
+| `@rive-app/canvas-lite` | Canvas2D | 最小体积，**裁掉文字、布局、音频、脚本引擎**——文件用到这些会直接不显示 |
+| `@rive-app/canvas-single` | Canvas2D | 把 wasm 内联进 JS，只需一次网络请求，代价是包更大 |
+
+React 对应 `@rive-app/react-webgl2` / `react-canvas` / `react-canvas-lite`，API 相同。
+
+`@rive-app/webgl` 已废弃（v2.37.0 之后不再更新），别再用。
+
+### 选 webgl2 要接受的两个约束
+
+1. **WebGL 上下文有上限**。每个 `new Rive({...})` 默认占一个上下文，同屏十几个实例可能触发淘汰。解法：给每个实例加 `useOffscreenRenderer: true`，共享一个离屏上下文。
+2. **非 Normal 混合模式在 MSAA 路径上很贵**（要重读整帧），移动端浏览器尤其明显。文件大量用混合模式时，`canvas` 包反而更快。
+
+> 切换成本极低：**只改一行 import**。两个包 API 完全一致，实测对比是值得的。
+
+## 三、其他平台
+
+| 平台 | 包 / 方式 | 备注 |
+|---|---|---|
+| iOS / macOS | Apple runtime（SPM / CocoaPods） | 默认 Rive Renderer；3D 需开 GPU Canvas |
+| Android | Compose runtime / 旧版 runtime | 旧版已移除 Canvas/Skia 渲染目标 |
+| Flutter | `rive` 包（0.14+） | `Factory.rive` 走 Rive Renderer，`Factory.flutter` 走 Skia/Impeller |
+| Unity / Unreal | 官方 runtime | 游戏引擎内直接用 |
+| C++ | 官方 C++ runtime | Windows 上还有 WinUI 的 `RivePlayer` 高层封装、`RiveSharp` 低层 |
+| React Native | `@rive-app/react-native` | 0.5.3+ 可开 GPU Canvas |
+
+## 四、车机（HMI）的三条路
+
+车机不是单一平台，常见宿主有三类。选哪条取决于**宿主已经是什么**，不是 Rive 支持什么。
+
+### 路线 A：Qt / QML 宿主
+
+车机 HMI 最常见的技术栈。选项：
+
+- **社区 QtQuick runtime**（basysKom 维护）——直接作为 QML 组件用
+- **官方 C++ runtime + 自己封一层 QML 组件**——可控性最好，工作量在封装
+
+判断点：QML 里要不要和现有控件树混排？要，走 QtQuick runtime；纯展示 + 少量交互，C++ 自封更轻。
+
+### 路线 B：Android Automotive 宿主
+
+直接用 Android runtime（Kotlin/Java）。这条路最省事——官方支持完整，Compose 也能用。
+
+判断点：目标屏是不是 Android 系统。是，就选这条，别绕。
+
+### 路线 C：Web 技术栈（WebView / QtWebEngine）
+
+用 `@rive-app/webgl2` 或 `canvas`。好处是**和设计侧验证环境完全一致**（浏览器里什么样，车机上就什么样）。
+
+代价要说清楚：
+
+- WebGL 在车机 GPU 上的驱动质量不可控，**必须实机测**
+- 冷启动、内存占用比原生高
+- 若宿主是 QtWebEngine，要注意它自带的 Chromium 版本对 WebGL2 的支持
+
+判断点：如果车机侧已经有 Web 容器，且动效不是全屏高频重绘，这条路最快；否则优先原生。
+
+## 五、上机前必须确认的五件事
+
+1. **尺寸与布局**：目标屏分辨率下 `fit` / `alignment` 怎么设。别用 `none`，除非你确认了 1:1 像素对齐。
+2. **同屏实例数**：超过 3~5 个就评估 `useOffscreenRenderer`（Web）或 `RivePanel`（Flutter）。
+3. **脚本**：文件里带 Luau 脚本且要上 Web，**必须 `--publish` 构建**——未签名的脚本会被 CDN 和 Web 运行时拒绝。
+4. **文件体积**：`.riv` 内嵌资产。规范说明板、废弃画板会让体积虚高，交付前拆文件。
+5. **驱动入口**：见 [画板体检与交付整理](audit.md)。没有输入的交互画板，上机是动不了的。
+
+## 六、工程约定
+
+`.riv` 是二进制，**Git 必须标 binary**，否则换行符转换会损坏文件：
+
+```gitattributes
+*.riv binary
+```
+
+这条不是可选项。Windows 上不加这一行，`.riv` 被 CRLF 转换后运行时报错，而且很难查。
+
+## 七、建议的落地路径
+
+```
+① 挑一个画板导出 .riv
+② 用 @rive-app/webgl2 起一个最小页面，localhost 跑通
+③ 确认交互（输入/绑定）真的能驱动
+④ 再换成目标宿主（Qt / Android / WebView）
+```
+
+第 ② 步不要跳。先在浏览器里验证"文件 + 驱动"是对的，再换宿主；否则出问题时你分不清是文件的问题还是宿主的问题。
+
+## 来源
+
+- 官方文档：[Canvas vs WebGL2](https://rive.app/docs/runtimes/web/canvas-vs-webgl)
+- 官方文档：[Choosing a Renderer](https://rive.app/docs/runtimes/choose-a-renderer)
+- 官方文档：[Getting Started with the Rive Runtimes](https://rive.app/docs/runtimes)

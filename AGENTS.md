@@ -61,7 +61,8 @@
 - 不写 token、本机绝对路径、账号邮箱
 - 未验证的内容不写进正文；确需提及就标"暂未收录"
 - 涉及数字（工具数、画板数、状态数）注明采集日期，Early Access 阶段会变
-- **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照。改任何 docs 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录），否则技能与文档漂移
+- **枚举只在 README**：新增/删除主题时只改 README 主题表与 AGENTS 的 FAQ 路由；`DEVELOPMENT.md` 的树只写层级与职责，不补文件名（v1.0.0→v1.4.0 期间就在那棵树上腐化了 5 篇文档）
+- **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照。改任何 docs 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录）；同步会按映射表把 `](中文名.md)` 重写成 `](英文名.md)`，所以快照里没有 docs 也能点开链接。`tools/sync-skill.ps1 -Check` 只校验不写入：有漂移或死链就返回非零退出码
 
 ## 常用命令
 
@@ -84,8 +85,9 @@ python skills/rive-ops/scripts/rive-merge/rml_merge.py --target work\tgt --sourc
 python skills/rive-ops/scripts/rive-merge/fill_assets.py --dir work\out --rev 目标.rev --rev 来源.rev --from work\src
 python skills/rive-ops/scripts/rive-merge/gate.py --dir work\out --fix --verify
 
-# docs 更新后同步技能快照（-Install 同时刷新 ~/.workbuddy/skills/rive-ops）
-tools/sync-skill.ps1 -Install
+# docs 更新后先校验（漂移 / 未映射文档 / 死链，非零退出即失败），再同步
+tools/sync-skill.ps1 -Check
+tools/sync-skill.ps1 -Install   # 同时刷新 ~/.workbuddy/skills/rive-ops
 ```
 
 ## 备注

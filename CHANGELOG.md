@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v1.4.1 — 2026-10-28
+
+索引与技能快照一致性修复。v1.4.0 的新主题在 README 与速查表里都查不到，技能快照里有 13 条死链。**不改任何实测结论**，只补入口、对齐数字、修同步链路。
+
+### 修正
+
+- **README 补「无清空合并文件」主题**（v1.4.0 新增的文档从未进过门面）：主题表 11 → 12 行，「快速开始」加一条路由
+- **速查表补合并管线与两个坑**：「四、CLI」新增合并四步命令块、`--from-rev` 目标目录须为空或新建、`--publish` 水印条件、「七、坑位速查」新增 `0xC0000409`（非 ASCII 文件名）与 `upload_rev` 无法并入已有文件两行（34 → 36 行）
+- **技能快照 13 条死链**：`tools/sync-skill.ps1` 改为复制时按映射表重写相对链接（`](中文名.md)` → `](英文名.md)`），未映射的降级为纯文本；新增 `-Check` 校验漂移、未映射文档与死链
+- **README 脚本表**补 `rive_mcp.py`，表头改为「PowerShell + Python」
+- **`SKILL.md` 铁律 1**：`capture_artboard` 未激活返回**空白图**（不是黑屏——纯黑/403 是另一类，见铁律 12）；排障路由把两者拆成两行
+- **`DEVELOPMENT.md` 目录树**：不再逐篇枚举（v1.0.0 那棵树缺 5 篇文档、3 个目录），改为层级 + 职责，枚举只留 README
+- **`v1.4.0` 漏记补全**：AGENTS、SKILL、sync 脚本的改动补进 v1.4.0 的「更新」
+
+### 新增
+
+- `skills/rive-ops/references/` 补齐 4 篇：`cli.md`、`audit.md`、`runtime.md`、`binding.md` —— 12 篇 docs 全部有快照（原 8 篇）
+- `SKILL.md` 任务路由补 3 条（CLI / RML、运行时选型、数据绑定）
+- `DEVELOPMENT.md` 补问题记录：`0xC0000409` 三组对照与判定方法（`$LASTEXITCODE` = `-1073740791` 且输出全空）
+
+### 校验
+
+- `tools/sync-skill.ps1 -Check` → `OK: 12 references in sync, 0 dead links.`
+- 全库相对链接检查 → 0 死链；README 主题 12 行、坑位表 36 行、参考 12 篇三处数字一致
+
 ## v1.4.0 — 2026-10-28
 
 新增「无清空合并」：把整份 Rive 文件并入另一个**已有内容**的文件，且不改动目标原内容。附带一套可执行的 CLI 脚本，而不是只写方法。
@@ -14,6 +39,12 @@
 
 - **`rive --verify` / `--once` 静默崩溃（exit `3221226505` = `0xC0000409`）的真因是资产文件名含非 ASCII**（中文、全角括号），不是内容损坏：同一份字节改成 `asset_NNN.<ext>` 后 `0 errors, 0 warnings`。`FontAsset exportTypeValue="referenced"` 是第二诱因。
 - 合并时同一 id 在目标顶层、在来源画板内会产出重复 id；改为对已占用 id 重分配并重写子树引用。
+
+### 更新
+
+- `AGENTS.md`：结论先行 21 → 26 条（新增 `0xC0000409` 非 ASCII 文件名、`referenced` 第二诱因、`rive pull` 必崩、同 id 重复分配、无清空合并入口）
+- `skills/rive-ops/SKILL.md`：铁律 21 → 25 条，任务路由加合并管线，排障路由加 3 行
+- `tools/sync-skill.ps1`：映射表增加 `无清空合并文件.md → merge.md`
 
 ### 实测数据
 

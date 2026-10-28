@@ -23,18 +23,21 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 任务 | 走法 | 深入参考 |
 |---|---|---|
 | 读场景 / 改属性 / 截图 | `get_selection` / `set_property_values` / `capture_artboard` | `references/mcp.md` |
-| 画板体检 / 搬运后核验 | `scripts/rive-audit.ps1`（八项指纹 → TSV） | `references/pitfalls.md` |
+| 从零用代码生成动效 / 进 Git | `rive create` 建工程 → 写 `scene.rml` → 三查（verify / inspect / screenshot）→ `--once` / `--publish` | `references/cli.md` |
+| 画板体检 / 搬运后核验 | `scripts/rive-audit.ps1`（八项指纹 → TSV） | `references/audit.md` |
 | 跨文件搬画板 | `export_file(rev)` → `scripts/rive-import.ps1` → 删多余 → 指纹核验 | `references/transfer.md` |
 | 整文件合并且**不清空**目标 | `rive create --from-rev` 拆两个工程 → `scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push` | `references/merge.md` |
 | Illustrator 素材导入 | `scripts/ai-svg-export.ps1` → 裁 `<font>` → data URI 上传 → `addSvgInstance` | `references/asset-import.md` |
 | 导出 `.riv` 交付 | Publish 导出 → 组件规则 → 字体 Embedded → 运行时验收 | `references/delivery.md` |
 | 运行时验收 | `assets/runtime-check-index.html` + 本地静态服务器 + Edge 无头截图 | `references/delivery.md` |
+| 选运行时 / 上车机 | `webgl2` 优先，同屏多实例加 `useOffscreenRenderer`；Qt / Android / WebView 三条路线 | `references/runtime.md` |
+| 交互做了但代码驱动不了 | 查 `inputs` / `dataBinds`（铁律 14）→ 补 ViewModel 触发并 `bindViewModelToArtboard` | `references/binding.md` |
 | 打开慢 / 素材字体转圈 / 资产瘦身 | `listAssets` → 图片 `206` / 字体 `279` 审计 → `delete_objects` 删未使用 → fontTools 子集化 | `references/performance.md` |
 | 按钮按压 / 开关 / 激活态 | 浮层 + 橙点 → 30 帧动画 → ViewModel bool → Listener Action Script toggle → 一按钮一层状态机 | `references/toggle-button.md` |
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
-1. `capture_artboard` 前必须 `focusArtboard`，否则返回黑屏。
+1. `capture_artboard` 前必须 `focusArtboard`，否则返回**空白图**（连 `backgroundColor` 都不生效）；整幅纯黑是另一类问题，见铁律 12。
 2. `animation_editor` 只作用于**活动画板**，`data.artboardId` 被静默忽略。
 3. `export_file` 的 `destination` 传**目录**，不是文件路径。
 4. 导出报 `HandshakeException` = 系统代理掐 TLS，**关代理**再导。
@@ -93,9 +96,10 @@ python .\scripts\rive-merge\rmlcore.py --selftest
 |---|---|
 | 导出报 `HandshakeException` | 关系统代理 |
 | `upload_rev` 报 requires no artboards | 删光目标画板再导 |
-| 截图空白 / 黑屏 / 403 | 先 `focusArtboard`；仍黑则查编辑器（渲染 bug 家族，与内容无关） |
+| 截图整幅空白 | 画板未激活（连背景色都不生效） | 先 `focusArtboard` 再抓 |
+| 截图纯黑 / 403 `UNACCESSIBLE` | Early Access 离屏渲染 bug，与内容无关 | 以编辑器显示为准；换对照画板确认服务没挂（铁律 12） |
 | 运行时中文全是 ▯ | 字体 `Type=Embedded`；SVG 导入的文字查 fontassetid 是否落到 Inter |
-| 交互画板上机动不了 | 按 14 补 ViewModel 触发 |
+| 交互画板上机动不了 | 按 14 补 ViewModel 触发（`references/binding.md`） |
 | `.riv` 画板数比源文件少 | 组件规则（7），拆文件或标组件 |
 | 层级顺序不对 | 后添加垫底——删掉重加（`reorder_objects` 的 order 枚举未文档化） |
 | 写入"成功"但没生效 | 回读验证；逐个写 |
@@ -107,21 +111,25 @@ python .\scripts\rive-merge\rmlcore.py --selftest
 | 要在**已有内容**的文件上并入另一个文件 | 走 CLI 合并管线，不要 `upload_rev`（它要求目标为空），见 `references/merge.md` |
 | `rive pull` 崩溃 / 拿不到 CLI 工程 | 1.8.0 已知必崩；改用 `rive create <dir> --from-rev` |
 
-完整 33 行对照表：`references/pitfalls.md`。
+完整 36 行对照表（2026-10-28）：`references/pitfalls.md`。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/33 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/36 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
+- `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
+- `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
 - `references/transfer.md` —— 跨文件搬运全流程与核验
+- `references/merge.md` —— 无清空合并：四步 CLI 管线、冲突语义、0xC0000409 三坑、push 回写
 - `references/asset-import.md` —— Illustrator → SVG → Rive 全链路（含 COM 防呆）
 - `references/delivery.md` —— 导出规则、字体内嵌、验收清单
+- `references/runtime.md` —— 运行时选型与车机落地：四个 Web 包、三条路线、上机前五项确认
+- `references/binding.md` —— 数据绑定与状态机驱动：两套模型、三个绑定坑、无头验证
 - `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
-- `references/merge.md` —— 无清空合并：四步 CLI 管线、冲突语义、0xC0000409 三坑、push 回写
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；`references/` 对应仓库 `docs/`，`pitfalls.md` 即仓库的 `速查表.md`。
-- 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；12 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。

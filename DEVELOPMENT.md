@@ -12,25 +12,19 @@
 
 ```
 rive-tips/
-├── README.md            门面：主题索引 + 快速开始
+├── README.md            门面：主题索引（唯一枚举文件名的位置）+ 快速开始
 ├── AGENTS.md            给 AI：结论先行 + FAQ 路由 + 约定
 ├── DEVELOPMENT.md       本文件：架构 + 问题记录
 ├── CHANGELOG.md         版本历史
-├── docs/                主题文档（一主题一篇）
-│   ├── MCP接入与联调.md
-│   ├── CLI与RML工作流.md
-│   ├── 跨文件搬运画板.md
-│   ├── 画板体检与交付整理.md
-│   ├── 运行时选型与车机落地.md
-│   ├── 数据绑定与状态机驱动.md
-│   └── 速查表.md
-└── scripts/             配合 MCP 的验证脚本
-    ├── rive-mcp.ps1
-    ├── rive-audit.ps1
-    └── rive-import.ps1
+├── docs/                主题文档：一主题一篇（当前 12 篇，清单见 README 主题表）
+├── scripts/             配合 MCP / CLI 的验证脚本（PowerShell + Python，5 个）
+├── tools/               runtime-check 验收页 + sync-skill 同步脚本
+└── skills/rive-ops/     WorkBuddy 技能包：SKILL.md + scripts/ + references/（docs 快照）
 ```
 
-**分层逻辑**：README 是索引，docs 是正文，scripts 是"能跑的证据"。三层各自独立，改一层不影响另两层。
+**分层逻辑**：README 是索引，docs 是正文，scripts / tools 是"能跑的证据"，skills 是可安装的出口（`references/` 由 `tools/sync-skill.ps1` 从 docs 生成，不手改）。
+
+**为什么这棵树只写层级**：v1.0.0 的树在这里逐篇列 docs 文件名，之后每加一篇就腐化一次，到 v1.4.0 已经少了 5 篇和 3 个目录。文件枚举集中在 README 一处，这里只描述职责。
 
 **为什么按主题切、不按功能切**：读者的问题是"我要搬画板"而不是"我要用 `upload_rev`"。按场景切，一篇解决问题。
 
@@ -99,7 +93,19 @@ rive-tips/
 - 解决：脚本内**输出统一用 ASCII**，中文结果写 UTF-8 文件再用读取工具查看；或保存为带 BOM 的 UTF-8
 - 预防：跨工具链的脚本一律 ASCII 输出，避免编码成为隐性依赖
 
+### 问题：`rive --verify` / `--once` 无输出直接崩（`0xC0000409`）
+
+**TL;DR**：不是内容损坏，是**资产文件名含非 ASCII**（中文、全角括号）。同一份字节改成 `asset_NNN.<ext>` 就 `0 errors, 0 warnings`。
+
+- 现象：`rive --verify` / `--once` 立刻退出，stdout / stderr **全空**，退出码 `3221226505`（`0xC0000409`），看起来像内存不足或工程损坏
+- 判定：`$LASTEXITCODE` 为 `-1073740791` / `3221226505` 且没有任何输出 → 按**文件名**查，不要按内容查。Rust 侧 panic=abort，不会给任何提示
+- 根因（三组对照）：原始工程（中文文件名）崩 → 全部改成 ASCII 名后通过 → 只把字体文件名改回中文，再崩
+- 第二诱因：`FontAsset exportTypeValue="referenced"`；缺这个属性表示 embedded，不算坑
+- 解决：`gate.py --fix-names --fix-fonts`；或合并时保留脚本默认的 ASCII 改名
+- 预防：合并管线里把 `gate.py --verify` 当**构建前闸门**，PASS 了才 `rive push`
+
 ## 来源
 
 - 问题 1、3、4、5、6 来自对 Rive 桌面版 MCP 的实操（2026-10-26）
 - 问题 2 另有官方更新日志佐证：[changelog / copy-paste 修复](https://rive.app/changelog/improvements-to-tooltips-copy-paste-and-shortcuts)
+- 问题 8 来自 CLI 合并实战（2026-10-28）：目标 8 画板 + 来源 33 画板 → 产出 35 画板 / 21343 元素，`0 errors, 0 warnings`；三组对照明细见 [无清空合并文件](docs/无清空合并文件.md)
