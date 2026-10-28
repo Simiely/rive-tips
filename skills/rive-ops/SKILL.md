@@ -1,6 +1,6 @@
 ---
 name: rive-ops
-description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, exporting .riv deliverables, auditing artboards, diagnosing slow file loads / asset bloat / font loading, or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
+description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, merging a whole file into another without clearing it, exporting .riv deliverables, auditing artboards, diagnosing slow file loads / asset bloat / font loading, or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
 agent_created: true
 ---
 
@@ -25,6 +25,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 读场景 / 改属性 / 截图 | `get_selection` / `set_property_values` / `capture_artboard` | `references/mcp.md` |
 | 画板体检 / 搬运后核验 | `scripts/rive-audit.ps1`（八项指纹 → TSV） | `references/pitfalls.md` |
 | 跨文件搬画板 | `export_file(rev)` → `scripts/rive-import.ps1` → 删多余 → 指纹核验 | `references/transfer.md` |
+| 整文件合并且**不清空**目标 | `rive create --from-rev` 拆两个工程 → `scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push` | `references/merge.md` |
 | Illustrator 素材导入 | `scripts/ai-svg-export.ps1` → 裁 `<font>` → data URI 上传 → `addSvgInstance` | `references/asset-import.md` |
 | 导出 `.riv` 交付 | Publish 导出 → 组件规则 → 字体 Embedded → 运行时验收 | `references/delivery.md` |
 | 运行时验收 | `assets/runtime-check-index.html` + 本地静态服务器 + Edge 无头截图 | `references/delivery.md` |
@@ -54,6 +55,10 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 19. 按压动效总时长 500ms = 按下 200ms + 抬起 300ms；不要做成 42 帧（200 + 500）。
 20. 多个开关按钮必须一按钮一层状态机；同一个 Layer 塞多个按钮只能有一个保持激活。
 21. 点击切换用 Listener Action Script 读 boolean 取反；脚本类型必须是 listenerAction，`context:viewModel()` 前必须绑定 ViewModel。
+22. CLI 1.8.0 的 `rive --verify` / `--once` **无输出直接崩溃**（exit `3221226505` = `0xC0000409`）先查资产文件名：**非 ASCII 名（中文/全角括号）必崩**，同一份字节改成 `asset_NNN.<ext>` 就 `0 errors`。`gate.py --fix-names` 一键改。
+23. `FontAsset exportTypeValue="referenced"` 是同一崩溃的第二诱因；缺这个属性表示 embedded，不算坑。`gate.py --fix-fonts` 一键改。
+24. `rive pull` 在 1.8.0 必崩；拆工程用 `rive create <dir> --from-rev=<x.rev>`。`rive push --name` 只收 ASCII；CLI **没有删除远程文件**的命令，联调草稿会留在云端。
+25. 同一 id 在目标里是顶层、在来源里嵌在画板内（或反之），合并后会出现重复 id，动画静默绑错对象——对已占用的 id 重新分配并重写子树引用，不能只按顶层判冲突。
 
 ## 3. 脚本速用
 
@@ -70,6 +75,14 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 
 # Illustrator 导出 SVG（精确文件名匹配 + 全部 COM 防呆）
 .\scripts\ai-svg-export.ps1 -FileName '261026x01深色.ai' -SourceAi 'D:\src\261026x01深色.ai' -OutSvg 'D:\out\dark.svg'
+
+# 整文件合并且不清空目标（Python 3.8+，无第三方依赖；rmlcore.py 为共享库）
+python .\scripts\rive-merge\rml_merge.py --target work\tgt --source work\src --out work\out `
+    --target-rev 目标.rev --source-rev 来源.rev --prune-orphans
+python .\scripts\rive-merge\fill_assets.py --dir work\out --rev 目标.rev --rev 来源.rev --from work\src
+python .\scripts\rive-merge\gate.py --dir work\out --fix --verify      # 必须 PASS 再 push
+python .\scripts\rive-merge\rev_assets.py --rev 目标.rev --rml work\tgt\scene.rml   # .rev ↔ 工程资产审计
+python .\scripts\rive-merge\rmlcore.py --selftest
 ```
 
 导出 SVG 后的固定后处理：正则裁掉 `<font>...</font>` 块（实测 25 MB → 80 KB）；若路径带的是内联 `style="fill:..."`，需展开为 `fill="..."` 表现属性（Rive 不解析 style 属性）。
@@ -90,6 +103,9 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 字体一直转圈 / Not Found | 旧资产记录卡住；fontTools 验证后重传/子集化；不要改 DNS |
 | 本机装同名字体无效 | 编辑器只用 Google Fonts / 上传字体；本地字体仅 CLI 项目可用 |
 | 要删未使用资产 | `delete_objects` 传资产 ID；删前备份 `.rev`，删后回读 `206`/`279` |
+| `rive --verify` 无输出直接崩（exit `3221226505`） | 资产文件名转 ASCII（`gate.py --fix-names`）；再查 `exportTypeValue="referenced"` 的字体 |
+| 要在**已有内容**的文件上并入另一个文件 | 走 CLI 合并管线，不要 `upload_rev`（它要求目标为空），见 `references/merge.md` |
+| `rive pull` 崩溃 / 拿不到 CLI 工程 | 1.8.0 已知必崩；改用 `rive create <dir> --from-rev` |
 
 完整 33 行对照表：`references/pitfalls.md`。
 
@@ -102,6 +118,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 - `references/delivery.md` —— 导出规则、字体内嵌、验收清单
 - `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
+- `references/merge.md` —— 无清空合并：四步 CLI 管线、冲突语义、0xC0000409 三坑、push 回写
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步

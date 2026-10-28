@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-10-27 v1.3.0（commit `cdb1b99`）—— 按钮开关与按压动效；500ms 总时长、Listener Action Script toggle、一按钮一层状态机；改 docs 后必须跑同步（见「约定」）
+> 📌 **文档基线**：2026-10-28 v1.4.0 —— 无清空合并（CLI 四步管线）；`0xC0000409` 真因是非 ASCII 资产文件名；改 docs 后必须跑同步（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -35,12 +35,18 @@
 19. **按压动效总时长 500ms = 按下 200ms + 抬起 300ms**；不要把 500ms 当成抬起段再加 200ms（42 帧会明显偏长）。
 20. **多个开关按钮必须一按钮一层状态机**；所有按钮塞在同一个 Layer 时，只能有一个按钮保持激活。
 21. **点击切换用 Listener Action Script 读 boolean 取反**；脚本类型必须是 `listenerAction`，`context:viewModel()` 前必须把 ViewModel 绑定到画板。
+22. **要"把 A 并进 B 且不清空 B"** → `upload_rev` 做不到（要求目标零画板）。走 `.rev` → `rive create` 两个 CLI 工程 → `skills/rive-ops/scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push`。
+23. **`rive --verify` / `--once` 无任何输出直接崩（exit `3221226505` = `0xC0000409`）** → 先查**资产文件名**：中文/全角名必崩，同一份字节改成 `asset_NNN.<ext>` 就 `0 errors`（实测对照）。`gate.py --fix-names` 一键改。
+24. **`FontAsset exportTypeValue="referenced"`** 是同一崩溃的第二诱因；缺这个属性表示 embedded，不要误报。
+25. **`rive pull` 在 1.8.0 必崩**，拆工程用 `rive create <dir> --from-rev=<x.rev>`；`rive push --name` 只接受 ASCII；**CLI 没有删除远程文件**的命令，联调草稿只能留在云端。
+26. **同一 id 在目标顶层、在来源画板内**（本案例 10 个 `CubicEaseInterpolator`）→ 合并会出重复 id、动画静默绑错对象；必须对已占用 id 重分配并重写子树引用。
 
 ## FAQ 路由
 
 - "怎么让 AI 直接改我的 Rive 文件" → [docs/MCP接入与联调.md](docs/MCP接入与联调.md)
 - "怎么用代码从零生成动效 / 进版本管理" → [docs/CLI与RML工作流.md](docs/CLI与RML工作流.md)
 - "复制粘贴丢了东西 / 怎么把画板搬到另一个文件" → [docs/跨文件搬运画板.md](docs/跨文件搬运画板.md)
+- "把 A 文件全部内容并进 B 且不能清空 B" → [docs/无清空合并文件.md](docs/无清空合并文件.md)
 - "文件要交付给开发了 / 怎么体检" → [docs/画板体检与交付整理.md](docs/画板体检与交付整理.md)
 - "用哪个运行时 / 怎么上车机" → [docs/运行时选型与车机落地.md](docs/运行时选型与车机落地.md)
 - "交互做了但代码触发不了" → [docs/数据绑定与状态机驱动.md](docs/数据绑定与状态机驱动.md)
@@ -72,6 +78,11 @@ scripts/rive-audit.ps1 -OutFile audit.tsv
 
 # 导入 .rev（需先在编辑器里切到目标文件）
 scripts/rive-import.ps1 -TargetFileId 1234567 -RevPath D:\export\src.rev
+
+# 无清空合并（Python 3.8+；脚本在 skills/rive-ops/scripts/rive-merge/）
+python skills/rive-ops/scripts/rive-merge/rml_merge.py --target work\tgt --source work\src --out work\out --target-rev 目标.rev --source-rev 来源.rev --prune-orphans
+python skills/rive-ops/scripts/rive-merge/fill_assets.py --dir work\out --rev 目标.rev --rev 来源.rev --from work\src
+python skills/rive-ops/scripts/rive-merge/gate.py --dir work\out --fix --verify
 
 # docs 更新后同步技能快照（-Install 同时刷新 ~/.workbuddy/skills/rive-ops）
 tools/sync-skill.ps1 -Install

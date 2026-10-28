@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v1.4.0 — 2026-10-28
+
+新增「无清空合并」：把整份 Rive 文件并入另一个**已有内容**的文件，且不改动目标原内容。附带一套可执行的 CLI 脚本，而不是只写方法。
+
+### 新增
+
+- `skills/rive-ops/scripts/rive-merge/`：`rmlcore.py`（共享库 + `--selftest`）、`rml_merge.py`（合并，三层冲突语义 + 资产四级匹配 + 孤儿剪枝 + 自动转 ASCII 文件名）、`fill_assets.py`（从 `.rev` / 目录回填素材）、`gate.py`（构建前静态闸门，可 `--fix --verify`）、`rev_assets.py`（`.rev` ↔ 工程资产审计）
+- `docs/无清空合并文件.md`：四步管线、冲突语义、0xC0000409 三坑、push 回写、已知限制
+- `skills/rive-ops/references/merge.md`：同步快照
+
+### 修正
+
+- **`rive --verify` / `--once` 静默崩溃（exit `3221226505` = `0xC0000409`）的真因是资产文件名含非 ASCII**（中文、全角括号），不是内容损坏：同一份字节改成 `asset_NNN.<ext>` 后 `0 errors, 0 warnings`。`FontAsset exportTypeValue="referenced"` 是第二诱因。
+- 合并时同一 id 在目标顶层、在来源画板内会产出重复 id；改为对已占用 id 重分配并重写子树引用。
+
+### 实测数据
+
+- 目标 8 画板 + 来源 33 画板（74 MB 资产）→ 合并产物 35 画板 / 67 资产 / 21343 元素，`0 errors, 0 warnings`，`gate PASS`；`rive push` 回写后云端指纹与本地一致
+- 剪枝一次清掉 34 个孤立资产；素材回填 53 个命中、14 个 `.luau` 由工程目录提供、0 缺失
+
 ## v1.3.5 — 2026-10-27
 
 速查表补齐两个 API 形态坑。

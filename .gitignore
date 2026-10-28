@@ -20,3 +20,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Python bytecode (skills/rive-ops/scripts/rive-merge)
+__pycache__/
+*.pyc

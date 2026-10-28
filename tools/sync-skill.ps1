@@ -14,6 +14,7 @@
         跨文件搬运画板.md       -> transfer.md
         MCP接入与联调.md        -> mcp.md
         性能诊断与资产瘦身.md    -> performance.md
+        无清空合并文件.md        -> merge.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     -Install also refreshes the installed skill at
@@ -44,6 +45,7 @@ $map = [ordered]@{
     'MCP接入与联调.md'      = 'mcp.md'
     '性能诊断与资产瘦身.md'  = 'performance.md'
     '按钮开关与按压动效.md'  = 'toggle-button.md'
+    '无清空合并文件.md'      = 'merge.md'
 }
 
 $done = 0
