@@ -12,11 +12,15 @@
       - Document matched by EXACT file name ("深色.ai" vs "浅色.ai" share a prefix)
       - Artboards collection is never enumerated with foreach (infinite output)
       - After export, the file's existence is reported (some options fail silently)
+      - Only documents this script opened are closed, and never saved
 
-    NOTE: text stays as <text> elements. Rive maps font-family by name and can
-    fall back to its bundled Inter font (no CJK glyphs). Convert text to
-    outlines in Illustrator (Type > Create Outlines) BEFORE exporting, or
-    re-link fonts in Rive afterwards.
+    TEXT: by default text stays as <text> elements. Rive maps font-family by name
+    and can fall back to its bundled Inter font (no CJK), which kills Chinese.
+    Pass -OutlineText to run createOutline() on every text frame before exporting
+    (equivalent to Type > Create Outlines). It walks textFrames in REVERSE because
+    createOutline() replaces the frame with a group and shifts the collection.
+    Outlining is one-way: the source .ai is closed WITHOUT saving, so keep a
+    master copy if the text still needs editing.
 
 .PARAMETER FileName
     Exact document file name to export (must be open, or use -SourceAi).
@@ -27,14 +31,20 @@
 .PARAMETER OutSvg
     Output SVG path.
 
+.PARAMETER OutlineText
+    Convert every text frame to outlines before exporting (recommended for Rive).
+
+.PARAMETER KeepOpen
+    Do not close the document after exporting.
+
 .EXAMPLE
-    .\ai-svg-export.ps1 -FileName '261026x01深色.ai' -SourceAi 'D:\src\261026x01深色.ai' -OutSvg 'D:\out\dark.svg'
+    .\ai-svg-export.ps1 -FileName '261026x01深色.ai' -SourceAi 'D:\src\261026x01深色.ai' -OutSvg 'D:\out\dark.svg' -OutlineText
 #>
 param(
     [Parameter(Mandatory = $true)][string]$FileName,
     [string]$SourceAi = '',
     [Parameter(Mandatory = $true)][string]$OutSvg,
-    [string]$Endpoint = 'unused',
+    [switch]$OutlineText,
     [switch]$KeepOpen
 )
 
@@ -50,25 +60,44 @@ Write-Output ("ATTACHED v" + $ai.Version)
 
 $matchName = $FileName -replace "'", "\'"
 $openLine = if ($SourceAi) {
-    "if (!doc) { doc = app.open(new File(`"$srcJs`")); }"
+    "if (!doc) { doc = app.open(new File(`"$srcJs`")); opened = true; }"
 } else {
     "if (!doc) { throw new Error('document not open: " + $FileName + "'); }"
 }
 
+# ExtendScript snippets are assembled as PowerShell strings: never put PowerShell
+# syntax (-not, $x.IsPresent) inside the here-string, it is not JavaScript.
+$outlineJs = if ($OutlineText) {
+    @'
+var outlined = 0, failed = 0;
+for (var k = doc.textFrames.length - 1; k >= 0; k--) {
+  try { doc.textFrames[k].createOutline(); outlined++; } catch (e) { failed++; }
+}
+r += " outlined=" + outlined + " failed=" + failed;
+'@
+} else {
+    'r += " textFrames=" + doc.textFrames.length + " kept as text";'
+}
+$closeJs = if ($KeepOpen) { '' } else { 'if (opened) { doc.close(SaveOptions.DONOTSAVECHANGES); r += " closed"; }' }
+
 $js = @"
 app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
 var doc = null;
+var opened = false;
 for (var i = 0; i < app.documents.length; i++) {
   if (app.documents[i].name == "$matchName") { doc = app.documents[i]; break; }
 }
 $openLine
 var r = "doc=" + doc.name + " items=" + doc.pageItems.length;
+$outlineJs
 var opt = new ExportOptionsSVG();
 opt.embedRasterImages = true;
+try { opt.preserveEditability = false; } catch (e) {}
+try { opt.cssProperties = SVGCSSPropertyLocation.PRESENTATIONATTRIBUTES; } catch (e) {}
 var f = new File("$outJs");
 doc.exportFile(f, ExportType.SVG, opt);
 r += " exists=" + f.exists;
-if (-not ($KeepOpen.IsPresent)) { doc.close(SaveOptions.DONOTSAVECHANGES); r += " closed"; }
+$closeJs
 r;
 "@
 
@@ -85,7 +114,7 @@ Start-Sleep -Milliseconds 800
 if (Test-Path $OutSvg) {
     $kb = [math]::Round((Get-Item $OutSvg).Length / 1KB, 1)
     Write-Output ("SVG_OK: " + $OutSvg + " (" + $kb + " KB)")
-    Write-Output 'NEXT: strip the embedded <font> block, then upload via upload_asset with a data URI.'
+    Write-Output 'NEXT: scripts/svg-prep.py clean -> images -> clip -> mask, then upload via data URI.'
 } else {
     Write-Output 'SVG_MISSING: export reported success but no file was written.'
     Write-Output 'Known cause: ExportOptionsSVG.fontType = OUTLINEFONT fails silently on AI 30.1.0.'

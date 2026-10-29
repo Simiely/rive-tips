@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v1.5.0 — 2026-10-29
+
+补完「AI 素材导入」的位图半条链路。原链路只覆盖矢量：`addSvgInstance` 会把 SVG 里内嵌的 `<image>` **静默丢掉**，三个启动页第一次导入时位图全灭，靠四轮返工才定位。本次把位图段的方法、坐标、阈值全部实测固化成文档 + 可执行脚本，目标是"照着跑一遍就对"。
+
+### 新增
+
+- `scripts/svg-prep.py` —— 导入前处理与验收五件套：`clean`（裁 `<font>` / 展开 `style=` / 补 `width/height`）、`images`（解出内嵌位图 + 它该占的矩形，直接给出**中心坐标与缩放百分比**）、`clip`（把 `clipPath` 解成 `x,y,w,h,r`）、`mask`（圆角遮罩烘进 alpha，4× 超采样）、`verify`（与 `.ai` 渲染做像素比对，带 PASS/FAIL 判据）
+- `docs/AI素材导入链路.md` 新增六节：`addSvgInstance` 丢位图、位图三坑（原点/垫底/缩放）、`clipPath` 不导入与遮罩烘焙、像素验收口径、中文图层名乱码、可复用清单
+
+### 修正
+
+- `scripts/ai-svg-export.ps1`：新增 `-OutlineText`（**倒序** `createOutline()`）、`cssProperties=PRESENTATIONATTRIBUTES`、`preserveEditability=false`
+- `scripts/ai-svg-export.ps1` **修掉一处语法错误**：`if (-not ($KeepOpen.IsPresent))` 原本被写在 ExtendScript 的 here-string 里，`-not` 不是 JavaScript —— 导出会成功，但紧接着这一行必然抛异常。改为拼装 PowerShell 字符串
+- 同一脚本改为**只关闭自己 `app.open` 的文档**，且从不保存（转轮廓是单向的，不能碰别人的未保存改动）
+- `scripts/svg-prep.py images` **缩放分母取错**：原来用 `<image>` 元素上 AI 写的 `width/height`（378×504），Rive 实际按**位图像素**（379×505）进场，比例因此算出 `33.3899%` 而非正确的 `33.3018%`。改为从 PNG IHDR / JPEG SOF 读真实像素，不一致时打印提醒
+- `tools/sync-skill.ps1` 补上 `scripts/` 段：原来只同步 `docs/` 和运行时页面，技能里的脚本靠手抄，`ai-svg-export.ps1` 早已过期、`svg-prep.py` / `rive_mcp.py` 根本没进去。现按**字节**同步顶层脚本并纳入 `-Check`（`DRIFT` / `MISSING SCRIPT` / `SKILL-ONLY` 三类）；`scripts/rive-merge/` 是技能独有目录，跳过不动
+- `tools/sync-skill.ps1` 新增 `STALE COUNT` 检查：`SKILL.md` 路由表末尾那句「完整 N 行对照表」是通往全表的入口，但它只是一句话、不是链接，死链检查抓不到——实际已从 36 漂到 46 而无人察觉。现在 `-Check` 会把它和 `docs/速查表.md` 的真实行数比对
+- `tools/sync-skill.ps1` 新增 `BOM IN SKILL.md` / `BAD FRONTMATTER` 检查：PS 5.1 的 `Set-Content -Encoding UTF8` 会写 BOM，作用在 `SKILL.md` 上就把开头的 `---` 变成 `\uFEFF---`，YAML 解析器随即看不到 frontmatter——全程无报错。这个坑本轮真踩了一次（改 46 行数字时顺手写坏），所以补上防线
+
+### 更新
+
+- `docs/速查表.md`：坑位表 36 → **46 行**（补 10 条：位图消失 / 偏左上 / 看不见 / 尺寸不对 / 圆角丢失 / 名字变方块 / `no drawable area` / 删资产没命令 / 新建画板跑偏 / 怎么确认资产能删），资产属性键补 Image 节点六项
+- **第二轮复用（QQ音乐重导）补三节实测**：`createArtboard` 自动挑空位（这次放到 x=9773，离目标列很远）→ 必须 `arrangeArtboard`；`listArtboards` 顺序按 **id 数值**排、不是创建顺序；`assets_tool` 没有 delete，资产走 `delete_objects`，删前逐画板读 `206` 证明 0 引用；**`addSvgInstance` 是一次性展开**，SVG 节点上没有资产键，资产落地即孤儿
+- `AGENTS.md`：结论先行 26 → **32 条**；FAQ 加「设计稿怎么导进来」；常用命令加素材导入六条
+- `README.md`：主题 8 的一句话重写、脚本表加 `svg-prep.py`、「最容易踩的坑」3 → **4 条**、快速开始加一条
+- `skills/rive-ops/SKILL.md`：铁律 25 → **31 条**；任务路由的素材导入行重写；排障路由加 4 行；脚本速用补 `rive_mcp.py`
+
+### 实测数据
+
+- 三个 2048×1152 启动页（矢量 450–515 对象/页 + 2 张位图）：像素差 **0.10 / 0.13 / 0.14**（`/255`）；同一批的错位版本 **3.16 / 2.51** —— 对错的差距 20 倍以上，阈值 `0.5` 有足够余量
+- 位图：`460×127 @(796.833,483.5)`；`379×505 → 126.214×168.286`（缩放 `33.3018% / 33.324%`）
+- 圆角遮罩：`clipPath` 解出 `(788,478) 124×124 r=20.571`，换成图像素是 `(3.3,66.4) 372.4×372.1 r=61.8`
+- 脚本自测：`clean` 产物与手工产物**逐字节一致**（14615 B / 18 path / 19 fill）；`mask` 与手工遮罩**逐像素一致**（0.0000/255）
+
 ## v1.4.1 — 2026-10-28
 
 索引与技能快照一致性修复。v1.4.0 的新主题在 README 与速查表里都查不到，技能快照里有 13 条死链。**不改任何实测结论**，只补入口、对齐数字、修同步链路。

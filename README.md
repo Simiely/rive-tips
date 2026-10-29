@@ -17,7 +17,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 5 | [画板体检与交付整理](docs/画板体检与交付整理.md) | 说明书 ≠ 交付件：驱动入口缺失、命名撞车、尺寸差 1px、双份实现怎么查 |
 | 6 | [运行时选型与车机落地](docs/运行时选型与车机落地.md) | 四个 Web 包的取舍、Qt / Android / WebView 三条车机路线、上机前五项确认 |
 | 7 | [数据绑定与状态机驱动](docs/数据绑定与状态机驱动.md) | State Machine Input 与 ViewModel 两套模型、三个高频绑定坑、怎么验证交互真的会跳 |
-| 8 | [AI 素材导入链路](docs/AI素材导入链路.md) | Illustrator 脚本导出 SVG → 文字转轮廓 → data URI 上传 → 放置验收，全链路防呆 |
+| 8 | [AI 素材导入链路](docs/AI素材导入链路.md) | `.ai` → 转轮廓 SVG → data URI 上传 → `addSvgInstance` 铺矢量；**内嵌位图会被静默丢弃**，要单独放并修三坑（原点/垫底/缩放）+ 遮罩烘焙，最后拿 `.ai` 渲染做像素验收 |
 | 9 | [导出规则与交付验收](docs/导出规则与交付验收.md) | `.riv` 只装「默认画板+组件」、字体必须 Embedded、运行时验收才是判据 |
 | 10 | [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md) | 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化 72 MB → 2 MB |
 | 11 | [按钮开关与按压动效](docs/按钮开关与按压动效.md) | 单图标 toggle：500ms = 200ms 按下 + 300ms 抬起、B4B4B4 35% 浮层、橙点、Listener Action Script、一按钮一层 |
@@ -42,17 +42,19 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | [`rive_mcp.py`](scripts/rive_mcp.py) | Python MCP 客户端：dict 传参 + 复用 session，绕开 PowerShell 传 JSON 的引号问题 |
 | [`rive-audit.ps1`](scripts/rive-audit.ps1) | 遍历所有画板采集指纹，输出 TSV（体检 / 搬运后核验） |
 | [`rive-import.ps1`](scripts/rive-import.ps1) | `.rev` 整包导入：等待目标文件激活 → 清空画板 → 导入 → 报告 |
-| [`ai-svg-export.ps1`](scripts/ai-svg-export.ps1) | 驱动运行中的 Illustrator 导出 SVG（COM + 全部防呆），供 Rive 导入 |
+| [`ai-svg-export.ps1`](scripts/ai-svg-export.ps1) | 驱动运行中的 Illustrator 导出 SVG（COM + 全部防呆）；`-OutlineText` 顺带把文字转轮廓 |
+| [`svg-prep.py`](scripts/svg-prep.py) | 导入前处理与验收五件套：`clean`（裁字体/展开 style/补尺寸）、`images`（解出内嵌位图 + 目标矩形）、`clip`（把 clipPath 解成矩形+圆角）、`mask`（烘圆角遮罩）、`verify`（与 `.ai` 渲染做像素比对） |
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
-Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + rive-merge 套件 5 个 Python + 12 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + rive-merge 套件 5 个 Python + svg-prep + 12 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
 
-## 三个最容易踩的坑
+## 四个最容易踩的坑
 
 1. **导出 `.rev` 时被系统代理掐死** —— 报 `HandshakeException`，看起来完全不像网络问题。关代理再来。
 2. **`capture_artboard` 抓空白** —— 画板没激活。先 `focusArtboard`。
 3. **跨文件粘贴丢内容** —— 不是手误。走 `.rev`，见 [主题 3](docs/跨文件搬运画板.md)。
+4. **`addSvgInstance` 导入后位图全不见了** —— 它静默丢弃 SVG 里内嵌的 `<image>`，不报错。位图要单独 `upload_asset` + `addImageInstance`，见 [主题 8](docs/AI素材导入链路.md)。
 
 ## 官方参考
 
@@ -68,6 +70,7 @@ Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打�
 - **想从零用代码生成动效 / 进 Git** → [CLI 与 RML 工作流](docs/CLI与RML工作流.md)
 - **画板要搬到另一个文件** → [跨文件搬运画板](docs/跨文件搬运画板.md)
 - **要把整个文件并进另一个文件、又不能清空它** → [无清空合并文件](docs/无清空合并文件.md)
+- **要把设计稿（`.ai` / SVG）导进来** → [AI 素材导入链路](docs/AI素材导入链路.md)
 - **动效要交给开发上机了** → [画板体检与交付整理](docs/画板体检与交付整理.md)
 - **打开文件很慢 / 素材字体一直转圈** → [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md)
 - **不确定选哪个运行时** → [运行时选型与车机落地](docs/运行时选型与车机落地.md)

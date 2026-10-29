@@ -27,7 +27,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 画板体检 / 搬运后核验 | `scripts/rive-audit.ps1`（八项指纹 → TSV） | `references/audit.md` |
 | 跨文件搬画板 | `export_file(rev)` → `scripts/rive-import.ps1` → 删多余 → 指纹核验 | `references/transfer.md` |
 | 整文件合并且**不清空**目标 | `rive create --from-rev` 拆两个工程 → `scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push` | `references/merge.md` |
-| Illustrator 素材导入 | `scripts/ai-svg-export.ps1` → 裁 `<font>` → data URI 上传 → `addSvgInstance` | `references/asset-import.md` |
+| Illustrator 素材导入 | `scripts/ai-svg-export.ps1 -OutlineText` → `svg-prep.py clean/images/clip` → data URI 上传 → `addSvgInstance` 铺矢量 → 位图单独 `addImageInstance` + 三坑 → `svg-prep.py verify` | `references/asset-import.md` |
 | 导出 `.riv` 交付 | Publish 导出 → 组件规则 → 字体 Embedded → 运行时验收 | `references/delivery.md` |
 | 运行时验收 | `assets/runtime-check-index.html` + 本地静态服务器 + Edge 无头截图 | `references/delivery.md` |
 | 选运行时 / 上车机 | `webgl2` 优先，同屏多实例加 `useOffscreenRenderer`；Qt / Android / WebView 三条路线 | `references/runtime.md` |
@@ -62,6 +62,12 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 23. `FontAsset exportTypeValue="referenced"` 是同一崩溃的第二诱因；缺这个属性表示 embedded，不算坑。`gate.py --fix-fonts` 一键改。
 24. `rive pull` 在 1.8.0 必崩；拆工程用 `rive create <dir> --from-rev=<x.rev>`。`rive push --name` 只收 ASCII；CLI **没有删除远程文件**的命令，联调草稿会留在云端。
 25. 同一 id 在目标里是顶层、在来源里嵌在画板内（或反之），合并后会出现重复 id，动画静默绑错对象——对已占用的 id 重新分配并重写子树引用，不能只按顶层判冲突。
+26. **`addSvgInstance` 静默丢弃内嵌 `<image>`**：矢量全在、位图 0 个 Image 节点、不报错。位图必须 `upload_asset`(data URI) + `addImageInstance` 单独进；判据是数一遍 `types` 含 `Image` 的节点。
+27. 图片实例的 `x/y` 是**原点**位置（`380/381` 默认 `50/50` 在中心）→ 填 `left+w/2, top+h/2`；`addImageInstance` **不接宽高**、按位图原生像素进场 → 回写 `sx`(16)/`sy`(17) 并回读 `810/811`；新加对象默认**垫底** → `sendToFront`。
+28. **`clipPath` 不会被导入**：建出来的 Shape 是空的，圆角/异形遮罩要在位图 alpha 里烘焙（`svg-prep.py clip` 直接给几何）。
+29. **AI 的中文图层名会变成方块**：导出时写成逐字节字符引用（声明 `iso-8859-1`），落成 `0x80–0x9F` 控制字符。只有图层名是中文的素材会中招，`rename_objects` 改回。
+30. **素材导入的验收是像素比对**：`.ai` 导 PNG24 当参考图，两侧 resize 到画板尺寸算平均差。正确 0.10–0.14/255、错位 2.5–3.2/255，阈值 `0.5`。
+31. `capture_artboard` 报 `has no drawable area`：一是画板未激活，二是该画板 `computedwidth/height`(810/811) 卡成 0 —— 写 w/h、`resizeArtboard`、改缩放都刷不回，**只能删画板重建**。
 
 ## 3. 脚本速用
 
@@ -70,14 +76,20 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 .\scripts\rive-mcp.ps1 -Tool session_info
 .\scripts\rive-mcp.ps1 -Tool capture_artboard -ArgsJson '{"artboardId":"0-1","longEdge":1024}' -OutImage out.png
 
+# 批量调用改 Python（PowerShell -File 会吞 JSON 双引号 → Invalid JSON primitive）
+#   CLI：python .\scripts\rive_mcp.py <tool> '{"json"}' [--out shot.png]
+#   导入：from rive_mcp import connect, call_text
+#         sid = connect(); call_text("query_property_values", {"propertyKeys": {"15-1": [7]}}, sid)
+python .\scripts\rive_mcp.py query_property_values '{"propertyKeys":{"15-1":[7,8]}}'
+
 # 全画板指纹体检（输出 TSV）
 .\scripts\rive-audit.ps1 -OutFile audit.tsv
 
 # .rev 整包导入（先在编辑器里切到目标文件，脚本轮询等待）
 .\scripts\rive-import.ps1 -TargetFileId 2682212 -RevPath D:\export\src.rev
 
-# Illustrator 导出 SVG（精确文件名匹配 + 全部 COM 防呆）
-.\scripts\ai-svg-export.ps1 -FileName '261026x01深色.ai' -SourceAi 'D:\src\261026x01深色.ai' -OutSvg 'D:\out\dark.svg'
+# Illustrator 导出 SVG（精确文件名匹配 + 全部 COM 防呆；-OutlineText 转轮廓）
+.\scripts\ai-svg-export.ps1 -FileName '261026x01深色.ai' -SourceAi 'D:\src\261026x01深色.ai' -OutSvg 'D:\out\dark.svg' -OutlineText
 
 # 整文件合并且不清空目标（Python 3.8+，无第三方依赖；rmlcore.py 为共享库）
 python .\scripts\rive-merge\rml_merge.py --target work\tgt --source work\src --out work\out `
@@ -86,9 +98,16 @@ python .\scripts\rive-merge\fill_assets.py --dir work\out --rev 目标.rev --rev
 python .\scripts\rive-merge\gate.py --dir work\out --fix --verify      # 必须 PASS 再 push
 python .\scripts\rive-merge\rev_assets.py --rev 目标.rev --rml work\tgt\scene.rml   # .rev ↔ 工程资产审计
 python .\scripts\rive-merge\rmlcore.py --selftest
+
+# 素材导入五件套：清理 → 解位图 → 解剪裁 → 遮罩 → 像素比对
+python .\scripts\svg-prep.py clean  D:\out\dark.svg D:\out\dark_rive.svg
+python .\scripts\svg-prep.py images D:\out\dark_rive.svg --outdir D:\out\img --json D:\out\img.json
+python .\scripts\svg-prep.py clip   D:\out\dark_rive.svg
+python .\scripts\svg-prep.py mask   D:\out\img\a.png D:\out\img\a_m.png --img-rect 786.893,455.857,126.214,168.286 --clip 788,478,124,124,20.571
+python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1152
 ```
 
-导出 SVG 后的固定后处理：正则裁掉 `<font>...</font>` 块（实测 25 MB → 80 KB）；若路径带的是内联 `style="fill:..."`，需展开为 `fill="..."` 表现属性（Rive 不解析 style 属性）。
+导出 SVG 后的固定后处理不再靠手写正则：`svg-prep.py clean` 一次做掉裁 `<font>`（实测 25 MB → 80 KB）、展开内联 `style="fill:..."` 为表现属性（Rive 不解析 style）、按 viewBox 补 `width/height`。
 
 ## 4. 排障路由（症状 → 解法）
 
@@ -104,14 +123,20 @@ python .\scripts\rive-merge\rmlcore.py --selftest
 | 层级顺序不对 | 后添加垫底——删掉重加（`reorder_objects` 的 order 枚举未文档化） |
 | 写入"成功"但没生效 | 回读验证；逐个写 |
 | 打开文件慢 / 素材转圈 | 无磁盘缓存；先资产审计，删未使用，必要时字体子集化（`references/performance.md`） |
+| 想删资产但在 `assets_tool` 里找不到命令 | 它没有 delete；资产当对象删：`delete_objects({"objectIds":["资产id"]})`，删前逐画板扫 `206` 引用数为 0 |
+| 新建画板跑到了画布别的角落 | `createArtboard` 自动挑空位（`x/y` 别传），建完用 `arrangeArtboard` 摆到目标坐标；`listArtboards` 顺序按 id 数值排，不是创建顺序 |
 | 字体一直转圈 / Not Found | 旧资产记录卡住；fontTools 验证后重传/子集化；不要改 DNS |
 | 本机装同名字体无效 | 编辑器只用 Google Fonts / 上传字体；本地字体仅 CLI 项目可用 |
 | 要删未使用资产 | `delete_objects` 传资产 ID；删前备份 `.rev`，删后回读 `206`/`279` |
 | `rive --verify` 无输出直接崩（exit `3221226505`） | 资产文件名转 ASCII（`gate.py --fix-names`）；再查 `exportTypeValue="referenced"` 的字体 |
 | 要在**已有内容**的文件上并入另一个文件 | 走 CLI 合并管线，不要 `upload_rev`（它要求目标为空），见 `references/merge.md` |
 | `rive pull` 崩溃 / 拿不到 CLI 工程 | 1.8.0 已知必崩；改用 `rive create <dir> --from-rev` |
+| **`addSvgInstance` 后位图全没了** | 内嵌 `<image>` 被静默丢弃；位图单独 `upload_asset` + `addImageInstance`（铁律 26） |
+| **位图偏左上半个 / 截图里看不见 / 尺寸不对** | 原点在中心、新对象垫底、按原生像素进场（铁律 27） |
+| **圆角图标导入后白底直角外露** | `clipPath` 不导入；用 `svg-prep.py clip` 取几何烘焙 alpha（铁律 28） |
+| **Layers 里中文名变方块** | 中文图层名被逐字节转义成控制字符；`rename_objects`（铁律 29） |
 
-完整 36 行对照表（2026-10-28）：`references/pitfalls.md`。
+完整 46 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 

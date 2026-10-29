@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-10-28 v1.4.1（commit `7f412d4`）—— 索引与技能快照一致性修复：README 12 主题、坑位表 36 行、references 12 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-10-29 v1.5.0 —— AI 素材导入链路补完位图半条链路，并用第二轮复用补齐画板落位与资产清理：README 12 主题、坑位表 46 行（不含表头）、结论先行 32 条、references 12 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -40,6 +40,12 @@
 24. **`FontAsset exportTypeValue="referenced"`** 是同一崩溃的第二诱因；缺这个属性表示 embedded，不要误报。
 25. **`rive pull` 在 1.8.0 必崩**，拆工程用 `rive create <dir> --from-rev=<x.rev>`；`rive push --name` 只接受 ASCII；**CLI 没有删除远程文件**的命令，联调草稿只能留在云端。
 26. **同一 id 在目标顶层、在来源画板内**（本案例 10 个 `CubicEaseInterpolator`）→ 合并会出重复 id、动画静默绑错对象；必须对已占用 id 重分配并重写子树引用。
+27. **`addSvgInstance` 静默丢弃内嵌 `<image>`**：矢量路径全在、位图 0 个 Image 节点、**不报错不告警**。位图必须 `upload_asset`(data URI) + `addImageInstance` 单独进；判据是数一遍 `types` 含 `Image` 的节点。
+28. **图片实例的 `x/y` 是原点位置**（`380/381` 默认 `50/50` 在中心），不是左上角 → 填 `left+w/2, top+h/2`；`addImageInstance` **不接宽高**、按位图原生像素进场 → 回写 `sx`(16)/`sy`(17)；新加对象默认**垫底** → `sendToFront`。
+29. **`clipPath` 不会被导入**：Rive 建出来的 Shape 是空的，圆角/异形遮罩必须在位图 alpha 里烘焙。`scripts/svg-prep.py clip` 直接把 clipPath 解成 `x,y,w,h,r`。
+30. **AI 的中文图层名会变成方块**：导出时写成逐字节字符引用（SVG 声明 `iso-8859-1`），落成 `0x80–0x9F` 控制字符 → 界面显示方块。只有**图层名是中文**的素材会中招，`rename_objects` 改回。
+31. **素材导入的验收是像素比对**：`.ai` 导 PNG24 当参考图，两侧 resize 到画板尺寸算平均差。实测正确 0.10–0.14/255、错位 2.5–3.2/255，阈值取 `0.5`。
+32. **`capture_artboard` 报 `has no drawable area`**：一是画板未激活（先 `focusArtboard`），二是该画板 `computedwidth/height`(810/811) 卡成 0 —— 写 w/h、`resizeArtboard`、改缩放都刷不回，**只能删画板重建**（重建时每步截图，即未再复现）。
 
 ## FAQ 路由
 
@@ -52,6 +58,7 @@
 - "交互做了但代码触发不了" → [docs/数据绑定与状态机驱动.md](docs/数据绑定与状态机驱动.md)
 - "打开文件很慢 / 素材和字体一直转圈" → [docs/性能诊断与资产瘦身.md](docs/性能诊断与资产瘦身.md)
 - "要做按钮按压 / 开关 / 激活态动效" → [docs/按钮开关与按压动效.md](docs/按钮开关与按压动效.md)
+- "设计稿（.ai / SVG）怎么导进来 / 位图丢了 / 图标圆角没了 / 图层名变方块" → [docs/AI素材导入链路.md](docs/AI素材导入链路.md)
 - 端点、命令、坑位一览 → [docs/速查表.md](docs/速查表.md)
 
 ## 约定
@@ -62,7 +69,7 @@
 - 未验证的内容不写进正文；确需提及就标"暂未收录"
 - 涉及数字（工具数、画板数、状态数）注明采集日期，Early Access 阶段会变
 - **枚举只在 README**：新增/删除主题时只改 README 主题表与 AGENTS 的 FAQ 路由；`DEVELOPMENT.md` 的树只写层级与职责，不补文件名（v1.0.0→v1.4.0 期间就在那棵树上腐化了 5 篇文档）
-- **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照。改任何 docs 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录）；同步会按映射表把 `](中文名.md)` 重写成 `](英文名.md)`，所以快照里没有 docs 也能点开链接。`tools/sync-skill.ps1 -Check` 只校验不写入：有漂移或死链就返回非零退出码
+- **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照，`skills/rive-ops/scripts/` 顶层文件是 `scripts/` 的字节副本。改任何 docs 或顶层 scripts 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录）；同步会按映射表把 `](中文名.md)` 重写成 `](英文名.md)`，所以快照里没有 docs 也能点开链接。`tools/sync-skill.ps1 -Check` 只校验不写入：`DRIFT` / `MISSING SCRIPT` / `SKILL-ONLY` / `STALE COUNT`（`SKILL.md` 里引用的坑位数与真实表行数不符）/ `BOM IN SKILL.md`（PS 5.1 写文件带的 BOM 会顶掉 frontmatter 的 `---`）/ 死链，任一命中就返回非零退出码（`scripts/rive-merge/` 是技能独有目录，不参与同步）。**改 `SKILL.md` 别用 `Set-Content -Encoding UTF8`**，用能控制 BOM 的方式写
 
 ## 常用命令
 
@@ -84,6 +91,14 @@ scripts/rive-import.ps1 -TargetFileId 1234567 -RevPath D:\export\src.rev
 python skills/rive-ops/scripts/rive-merge/rml_merge.py --target work\tgt --source work\src --out work\out --target-rev 目标.rev --source-rev 来源.rev --prune-orphans
 python skills/rive-ops/scripts/rive-merge/fill_assets.py --dir work\out --rev 目标.rev --rev 来源.rev --from work\src
 python skills/rive-ops/scripts/rive-merge/gate.py --dir work\out --fix --verify
+
+# 素材导入：导出（转轮廓）→ 清理 → 解位图/剪裁几何 → 遮罩 → 像素比对
+scripts/ai-svg-export.ps1 -FileName 'x.ai' -SourceAi 'D:\src\x.ai' -OutSvg 'D:\out\x.svg' -OutlineText
+python scripts/svg-prep.py clean  D:\out\x.svg D:\out\x_rive.svg
+python scripts/svg-prep.py images D:\out\x_rive.svg --outdir D:\out\img --json D:\out\img.json
+python scripts/svg-prep.py clip   D:\out\x_rive.svg
+python scripts/svg-prep.py mask   D:\out\img\a.png D:\out\img\a_m.png --img-rect 786.893,455.857,126.214,168.286 --clip 788,478,124,124,20.571
+python scripts/svg-prep.py verify shot.png ref.png --size 2048x1152
 
 # docs 更新后先校验（漂移 / 未映射文档 / 死链，非零退出即失败），再同步
 tools/sync-skill.ps1 -Check

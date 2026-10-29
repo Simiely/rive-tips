@@ -141,6 +141,16 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **COM 调 Illustrator 挂死** | 未屏蔽弹窗 | ExtendScript 第一行设 `DONTDISPLAYALERTS`（[详见](asset-import.md)） |
 | **`rive --verify` / `--once` 无输出直接崩（exit `3221226505` = `0xC0000409`）** | 资产文件名含非 ASCII（中文、全角括号）必崩；`FontAsset exportTypeValue="referenced"` 是第二诱因 | `gate.py --fix-names --fix-fonts`；判定：`$LASTEXITCODE` = `-1073740791` 且 stdout/stderr 全空（[详见](merge.md)） |
 | **想把 A 文件并进有内容的 B，`upload_rev` 被拒** | `upload_rev(open_file)` 要求目标零画板 | 走 CLI 合并四步管线（见「四、CLI」），不要清空目标（[详见](merge.md)） |
+| **`addSvgInstance` 导入后位图全没了** | 它**静默丢弃内嵌 `<image>`**，矢量全在、位图不报错消失 | 位图单独 `upload_asset` + `addImageInstance`（[详见](asset-import.md)） |
+| **位图整体偏左上半个图标** | 图片的 `x/y` 是**原点**位置，默认原点 `50/50` 在中心 | 填矩形中心 `left+w/2, top+h/2`，或把 `380/381` 改成 0 |
+| **位图加了但截图里看不见** | 新加对象默认**垫底**，被整屏不透明背景压住 | `reorder_objects sendToFront`，回读 `children[0]` |
+| **位图尺寸不是目标尺寸** | `addImageInstance` 不接宽高，按位图**像素**尺寸进场（不是 SVG 上写的 `width/height`，AI 常写 378×504 而 PNG 是 379×505） | 回写 `sx`/`sy`（键 16/17）百分比，分母用真实像素，回读 `810`/`811` |
+| **圆角图标导入后白底直角外露** | `clipPath` **不跟着导入**（建出来的 Shape 是空的） | 从 clipPath 读矩形+圆角，烘进位图 alpha（[详见](asset-import.md)） |
+| **Layers 里中文组名变方块/`å_x90_…`** | AI 把中文图层名写成逐字节字符引用（`iso-8859-1` 声明），落成控制字符 | 扫 `_xNN_`/`0x80–0x9F`，`rename_objects` 改回中文 |
+| `capture_artboard` 报 `has no drawable area` | 画板未激活；或该画板 `computedwidth/height` 卡成 0 | 先 `focusArtboard`；卡 0 只能删画板重建 |
+| **想删资产 / 找"删资产"的命令** | `assets_tool` 的 command 枚举里**没有 delete**（只有 list/query/add*） | 资产也是对象，直接用 `delete_objects({"objectIds":["3-133069"]})`；删前先扫一遍 `206` 引用数 |
+| **新建画板跑到画布别处，不在想要的位置** | `createArtboard` **自动放到空闲区域**（这次是 x=9773），`x/y` 参数官方建议别传 | 建完立刻 `arrangeArtboard` 摆到目标坐标；画板列表顺序按 **id 数值**排（`4-14` → `4-957`），不按创建顺序 |
+| **想确认某资产还能不能删** | 只看 `listAssets` 看不出来，没有引用计数 | 逐画板 `find_objects type=image` + 批量 `query_property_values`（键 `206`），计数 0 才删；SVG 资产例外——`addSvgInstance` 是**一次性展开**，节点上没有资产键，删了不影响已生成的图形 |
 
 ## 八、画板指纹（核验口径）
 
@@ -162,5 +172,15 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | CDN base URL / UUID | `362` / `359` |
 | Include in export | `801` |
 | `size` | `211`（实测恒为 0，不能用） |
+
+Image 节点（位图实例）常用键：
+
+| 用途 | 键 |
+|---|---|
+| 图片资产引用 | `206` |
+| x / y（原点位置） | `13` / `14` |
+| 缩放 % | `16` / `17` |
+| 原点 x / y（%，默认 50/50） | `380` / `381` |
+| computed 宽 / 高（只读，判定是否落地） | `810` / `811` |
 
 资产审计与字体子集化的完整流程见 [性能诊断与资产瘦身](performance.md)。
