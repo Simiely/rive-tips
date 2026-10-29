@@ -68,6 +68,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 29. **AI 的中文图层名会变成方块**：导出时写成逐字节字符引用（声明 `iso-8859-1`），落成 `0x80–0x9F` 控制字符。只有图层名是中文的素材会中招，`rename_objects` 改回。
 30. **素材导入的验收是像素比对**：`.ai` 导 PNG24 当参考图，两侧 resize 到画板尺寸算平均差。正确 0.10–0.14/255、错位 2.5–3.2/255，阈值 `0.5`。
 31. `capture_artboard` 报 `has no drawable area`：一是画板未激活，二是该画板 `computedwidth/height`(810/811) 卡成 0 —— 写 w/h、`resizeArtboard`、改缩放都刷不回，**只能删画板重建**。
+32. **导入慢先量再优**：一页 531 对象全链路 9.6 s（导出 4,893 / `upload_asset` 1,289 / `addSvgInstance` 2,213 / `verify` 321 ms）。`upload`+`addSvgInstance` 占 36% 且都在解析同一份 SVG，瘦身上游能一次降两处。但**别把单步当瓶颈**：同一批步骤用现成脚本 9.6 s、现写脚本实跑 65 s，差额全在"读输出→写脚本→再跑"的循环里。详见 `references/asset-import.md` 第十二节。
 
 ## 3. 脚本速用
 
