@@ -161,6 +161,12 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **`capture_artboard` 对*所有*画板都报 `has no drawable area`** | 整机级离屏渲染故障，不是某块画板的问题（单画板才有"未激活/`810` 卡 0"两种） | 判据：所有画板的 `810`/`811` 都是 0；**别删画板重建**，等它自愈 |
 | **像素验收按 `mean < 0.5` 判会把正确结果判成失败** | 阈值是绝对值；源 SVG 自己对参考图就有差异（本次基线 1.40） | 先量「源 SVG vs 参考图」基线，判据改成 `≤ 基线 + 0.3` |
 | **`reorder_objects` 报 `operations must be an array`** | 参数是 `operations[]`，不是 `objects` | `{"operations":[{"objectId":"x","order":"sendToBack"}]}`；顺带：新对象追加到 `children` 末尾（= 最底），**按"目标从上到下"依次添加，层序自动正确** |
+| **导入报 `SVG conversion for asset X is unavailable`** | **SVG 转换在 Rive 服务端做**，这次转换失败了；同一资产重试无意义 | 换新资产重传；先本地自查 `<use>`、悬空 `url(#…)`、体积，再上传（[详见](asset-import.md)） |
+| **导入等很久 / 客户端先超时** | 服务端转换是跨网络的，慢和死从外面看一样 | 别重复提交；按 `children` 是否出现该组判断结果；单份拆到 60 KB 以内 |
+| **整组图标/文字消失，原文件有 `<use href="#…">`** | 服务端转换器**不解析 `<use>`** | 本地展开成内联 `<g transform="translate(…)">` + 深拷贝（拷完去 `id`），并裁掉因此孤立的 `<defs>` |
+| **`<use>` 展开后是空组（0 条 path）** | 它引用的字形定义在上游 `clean` 阶段随 `<font>` 块被裁掉了 | 这份 SVG 本来就没有这些矢量，内容只存在于烘焙位图里；跳过该组，别反复重试 |
+| **分组 SVG 体积异常大（130–200 KB）** | 每组都携带整份 `<defs>` | 按 `url(#…)` / `href="#…"` 引用闭包裁剪，只留本组走得到的；实测 199 KB → 1.8 KB，渲染不变 |
+| **`addImageInstance` 的返回里没有 `nodeId`** | 返回体缺字段，但节点确实建好了 | 回读 `children` 按 `name` 取 id 再写属性，别对 `None` 调 `set_property_values` |
 
 ## 八、画板指纹（核验口径）
 

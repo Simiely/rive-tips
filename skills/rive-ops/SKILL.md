@@ -75,6 +75,11 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 36. **层序**：`children` 的顺序是 top→bottom，新对象**追加到末尾 = 最底**，所以"先加的反而在上面"。→ **按"目标从上到下"依次添加，层序自动正确**，不用逐个 `sendToFront`。事后调整：`reorder_objects` 的参数是 **`operations[]`**，传 `objects` 报 `operations must be an array`。代价：位图插不回原组内部。
 37. **`upload_asset` 的 data URI 里 `name=` 只收 ASCII**：中文报 `Illegal percent encoding in URI`。Rive 里想要的图层名走 `addSvgInstance` 的 `name` 参数（那里可以是中文）。
 38. **刚建好的节点立刻写属性会被吞**（不只是"批量写"）：`addImageInstance` 后马上写 `sx/sy` 返回 `success: true` 但值不变 → 写后回读，不对再写。另：烘焙图是目标的 N 倍时，缩放 = `100 × 目标宽 / 位图真实像素宽`（4 倍图 → 25%）。
+39. **SVG 的解析与转换在 Rive 服务端做**：报 `SVG conversion for asset X is unavailable` 就是这次转换失败，**同一资产重试无意义**，必须换新资产重传。等待是跨网络的，"慢"与"死"外层同形 → 用 `children` 里有没有出现该组来判定结果。
+40. **服务端转换器不解析 `<use>`**（Figma 的图标/字形大量靠它）：轻则那块内容消失，重则整份资产转换失败。本地展开成内联 `<g transform="translate(…)">` + 深拷贝（拷完去掉 `id`）。
+41. **`<use>` 展开后可能是空组**：引用的字形轮廓躺在 `<font>` 里、已被上游按"Rive 不消费 `<font>`"裁掉。展开后 0 条 `path` 就跳过，别重试（3 次 × 4 秒白等）。
+42. **每组 SVG 别携带整份 `<defs>`**：按 `url(#…)` / `href="#…"` 引用闭包裁剪，只留本组走得到的。005 从 130–199 KB/组降到 1.3–1.8 KB，渲染不变。
+43. **`addImageInstance` 可能不回 `nodeId`**（节点已建好）→ 回读 `children` 按 `name` 取 id。另：无 `clip`/`transform` 的位图直接取**原生像素**（scale 100%），比隔离渲染更准更省。
 
 ## 3. 脚本速用
 
@@ -146,12 +151,15 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **位图偏到画外 / 按 clipPath 算出来是空白** | 可见框 ≠ `<image>` 矩形（pattern + rotate 叠加） | 隔离渲染取 alpha bbox（铁律 33） |
 | **导入卡在 in progress，之后所有导入都被拒** | 悬空 `mask` 引用、或单份 SVG 过大 | 清引用属性、按组拆分；只能重启桌面端（铁律 35） |
 | **所有画板截图都报 `has no drawable area`** | 整机级离屏渲染故障，不是画板问题 | 别删画板，等它自愈（铁律 31） |
+| **报 `SVG conversion for asset X is unavailable`** | 服务端转换失败，同一资产重试无效 | 换新资产重传；先查 `<use>`、悬空引用、体积（铁律 39） |
+| **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
+| **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 56 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 62 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/56 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/62 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
