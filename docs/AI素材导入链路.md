@@ -1,30 +1,31 @@
 # AI 素材导入链路：Illustrator → SVG → Rive
 
-**TL;DR**：`.ai` 不能直接进 Rive。可靠链路是 **Illustrator 脚本导出 SVG（文字转轮廓 + 表现属性）→ 裁 `<font>` / 展开 `style` / 补尺寸 → data URI 上传 → `addSvgInstance` 铺矢量层 → 位图必须单独上传 + `addImageInstance`（`addSvgInstance` 会静默丢掉内嵌 `<image>`）→ 位图三坑（原点 / 垫底 / 缩放）→ 裁切遮罩烘焙进位图 → 拿 `.ai` 的渲染做像素验收**。跳过任何一步都会以"看起来成功、实际不可用"收场。
+**TL;DR**：`.ai` 不能直接进 Rive。可靠链路是 **Illustrator 脚本导出 SVG（文字转轮廓 + 表现属性）→ 裁 `<font>` / 展开 `style` / 补尺寸 → data URI 上传 → `addSvgInstance` 铺矢量层 → 位图必须单独上传 + `addImageInstance`（`addSvgInstance` 会静默丢掉内嵌 `<image>`）→ 位图五坑（原点 / 层序 / 缩放 / **可见框 ≠ `<image>` 矩形** / **裁完是空的**）→ 裁切遮罩烘焙进位图 → 拿参考渲染做像素验收（**阈值相对源基线，不是常数**）**。跳过任何一步都会以"看起来成功、实际不可用"收场。
 
-> 更新时间：2026-10-29 ｜ 已验证：Illustrator 30.1.0 + Rive 桌面版 1.9.x（Windows）
-> 样本：3 个 2048×1152 启动页（矢量 450–515 对象/页，位图 2 张），最终像素差 0.10–0.14/255
+> 更新时间：2026-11-03 ｜ 已验证：Illustrator 30.1.0 + Rive 桌面版 1.9.x（Windows）
+> 样本：3 个 2048×1152 启动页（矢量 450–515 对象/页，位图 2 张），最终像素差 0.10–0.14/255；1 个 2560×1440 车机页（5 个命名组 / 4 张位图 / 7829 对象），Rive 结果 1.43 vs 源 SVG 基线 1.40
+> **入口不止一个**：手头已经是分层 SVG（Figma 直接导出、或上一轮从 PDF 转出来的中间产物）时，第二节整段可以跳过，见[第十三节](#十三从现成分层-svg-直接进跳过-illustrator)。
 
 ## 一、全链路总览
 
 ```
-.ai (PDF 兼容)
+.ai (PDF 兼容)          ┌─ 也可以是现成的分层 SVG，① 整段跳过（见第十三节）
   │  ① Illustrator COM / ExtendScript 导出 SVG
   │     DONTDISPLAYALERTS 必设 + 文字倒序 createOutline()
   ▼
 .svg（可能内嵌 <font> + <text> + <image>）
   │  ② 后处理：裁 <font>、展开 style=、补 width/height
-  │  ③ 解出内嵌 <image>：transform 链 → 绝对 x/y/w/h
+  │  ③ 解出内嵌 <image>：可见框 ≠ <image> 矩形，用渲染器取 alpha bbox
   ▼
-干净 SVG  +  独立 PNG 清单（含目标矩形）
-  │  ④ upload_asset（data URI）
+干净 SVG  +  独立 PNG 清单（含目标矩形，裁完断言非空）
+  │  ④ upload_asset（data URI，name= 只用 ASCII）
   ▼
 SVGAsset  /  ImageAsset
-  │  ⑤ assets_tool addSvgInstance  →  矢量层（位图会丢！）
-  │  ⑥ addImageInstance           →  位图另放，再修三坑
+  │  ⑤ assets_tool addSvgInstance  →  矢量层（位图会丢！按组拆分，单份 <60 KB）
+  │  ⑥ addImageInstance           →  位图另放，修五坑（原点/层序/缩放/可见框/空图）
   │  ⑦ 遮罩烘焙（clipPath 不导入）
   ▼
-画板  │  ⑧ 像素比对（.ai 的 PNG24 渲染当裁判）
+画板  │  ⑧ 像素比对（先量源基线，判据 ≤ 基线 + 0.3）
   ▼
 完成
 ```
@@ -225,6 +226,54 @@ sy = 168.286 / 505 * 100 = 33.324
 
 `svg-prep.py images` 现在直接从 PNG 的 IHDR / JPEG 的 SOF 读真实像素，两者不一致时会打一行 `! SVG declares … but the bitmap is …` 提醒。
 
+### 坑 4：可见框不等于 `<image>` 上的 `x/y/width/height`
+
+上面三个坑都默认"图片按 `<image>` 的矩形铺在画布上"。**Figma 导出的稿子经常不是**：`<image>` 可能只是一块 pattern 的填充内容，真正露出来的区域由 `clip-path` 决定，还常常叠一层 `transform="rotate(…)"` 把纹理转正。
+
+004 那页的车辆图就是这样：
+
+```xml
+<image x="1751.82" y="53.45" width="246.88" height="139.51"
+       transform="rotate(89.815 1751.82 53.5371)"
+       clip-path="url(#004_patclip_3)" .../>
+```
+
+按 `clipPath` 的矩形（`1751.82,53.54` 246.88×139.34）去裁 → **空白**；按 `<image>` 自己的矩形去放 → 偏到画外。真实可见框是 **`(1623, 153.5) 114.5×47.5`**，跟两者都不沾边。同一页的专辑封面更极端：`<image>` 是 189.68×237.16 的整张照片，可见部分只有 **`64×64`**。
+
+`svg-prep.py images` 也是按 `<image>` 解矩形的，遇到这类素材同样会算错。**别手算，让渲染器算**：
+
+1. 拼一个只含这一张 `<image>` 的 SVG，`<defs>` 全带上（`clipPath`、pattern 都在里面）
+2. 铺满整张画布透明渲染（`width/height` = 画布，`viewBox` 用画布坐标）
+3. `PIL` 的 `getbbox()` 就是可见框，直接裁
+
+```python
+bbox = Image.open(iso_png).convert("RGBA").getbbox()   # 真实可见框，几何交给渲染器
+```
+
+### 坑 5：裁完必须断言"不是空的"
+
+同一个坑的另一半，也是最贵的一次教训。超采样渲染（比如 2× 出 5120×2880）后，`getbbox()` 给的是**该图自己的像素坐标**；换算成画布坐标时除了缩放倍数、裁剪时又乘了一次，就会裁到画布外——`PIL` 不报错，越界部分补透明，得到**尺寸正确、内容全空**的 PNG。
+
+这种 PNG 一路都"成功"：`upload_asset` 返回正常 id、`addImageInstance` 建出节点、`set_property_values` 写入尺寸、回读 `810/811` 全对——直到在编辑器里看见图层是空的。本轮就是这样交付了一次，用户一句"车还没导进去"才暴露。
+
+```python
+crop = iso.crop(box_2x)
+alpha = np.array(crop)[..., 3]
+assert (alpha > 8).sum() > 0, "裁出来是空的：坐标乘了两次缩放"
+```
+
+判据：`alpha.max() == 0` 就是全空。`addImageInstance` 之后别只看尺寸，顺手看一眼位图本身。
+
+### 坑 6：烘焙图是目标的 N 倍时会大出一圈
+
+为了不让位图放大后发软，烘焙常按 2×/4× 出图。Rive 按位图**真实像素**以 100% 进场，于是"尺寸对、比例错"：
+
+```
+目标 114.5 px，烘焙图 458 px  →  缩放 = 100 × 114.5 / 458 = 25%
+```
+
+`810/811` 回读会立刻暴露（114.5 的目标读出来是 458）。反推一次就能定位是倍数没除掉。
+
 ### 位图相关的属性键（实测）
 
 | 用途 | 键 |
@@ -307,6 +356,15 @@ ratio6 = sum(hist[16:]) / (w*h)     # 差异 > 6% 的像素占比
 
 **对与错的差距是 20 倍以上**：正确的在 0.15 以内（纯抗锯齿），错位的都在 2.5 以上。阈值取 `mean < 0.5` 有足够余量，不会误判。
 
+**但 `0.5` 不是常数，是相对基线的。** 上面这句只在那批样本成立——它们的源 `.ai` 与 SVG 渲染几乎一致，误差全来自抗锯齿。换成 Figma 导出的稿子，**源 SVG 自己对参考图就有 1.4 的差**（filter 烘焙、pattern 化、Type3 字形都会拉高），这时拿绝对值 `0.5` 判，会把**正确的结果**判成失败，然后去改一个本来没毛病的地方。
+
+正确口径：先量一次「**源 SVG vs 参考图**」得到基线，判据取 `Rive 结果 ≤ 基线 + 0.3`。
+
+| 样本 | 源 SVG vs 参考 | Rive 结果 | 判 |
+|---|---|---|---|
+| 2048×1152 启动页 | ≈0.1（几乎重合） | 0.10–0.14 | PASS（绝对 0.5 也 PASS） |
+| 2560×1440 车机页 004 | **1.40** | **1.43** | PASS（绝对 0.5 会误判 FAIL） |
+
 > 注意别用"差异像素占比"单独判：满屏背景色占了画面 90%，一个图标偏位只影响 2% 的像素，占比看起来很小，但平均差已经翻了 20 倍。`mean` 更灵敏。
 
 ### 录制注意
@@ -343,14 +401,18 @@ ratio6 = sum(hist[16:]) / (w*h)     # 差异 > 6% 的像素占比
 □ AI：倒序 createOutline() 转轮廓；cssProperties=PRESENTATIONATTRIBUTES
 □ SVG：裁 <font>、展开残余 style=、按 viewBox 补 width/height
 □ SVG：解出内嵌 <image> 的矩形（transform 链），别相信"导入就都在"
-□ 上传：data URI；上传后 listAssets 复查（防假 0-0）
+□ SVG：拆 defs 时同步删掉 mask= / filter= 引用属性（悬空引用会让导入器永久卡死）
+□ SVG：单份控制在 60 KB 内，按命名组拆分导入
+□ 上传：data URI 的 name= 只用 ASCII；上传后 listAssets 复查（防假 0-0）
 □ 矢量：addSvgInstance → 数一遍 Image 节点（本轮应为 0）
+□ 位图：可见框用"隔离渲染 + alpha bbox"取，不按 <image> / clipPath 手算
+□ 位图：裁完断言 alpha>8 像素数 > 0（防"尺寸对、内容空"）
 □ 位图：addImageInstance 传**中心**坐标（left+w/2, top+h/2）
-□ 位图：reorder_objects sendToFront，回读 children[0]
-□ 位图：回写 sx/sy，回读 computedwidth/height = 目标值
+□ 位图：按"目标从上到下"顺序添加，层序自动正确（新对象追加到 children 末尾）
+□ 位图：回写 sx/sy（= 100 × 目标宽 / 位图真实像素宽），回读 computedwidth/height = 目标值
 □ 遮罩：clipPath 几何烘进位图 alpha（超采样 4×）
 □ 名字：扫 _xNN_ / 控制字符，rename_objects 修
-□ 验收：.ai → PNG24 当参考图，像素平均差 < 0.5/255 才算过
+□ 验收：先量源 SVG 基线，判据 = 不超过基线 + 0.3（不是绝对 0.5）
 □ 落位：createArtboard 会自动挑空位，建完 `arrangeArtboard` 摆到目标坐标
 □ 收尾：废弃画板 delete_objects 删掉 → 再扫 `206` 确认旧资产 0 引用 → 删资产
 ```
@@ -416,6 +478,80 @@ delete_objects({"objectIds": ["3-133069"]})     # 这是资产 id，不是图形
 
 批量导多页时还有一条：**导出共用一次 Illustrator 会话**，第二页起跳过 COM 附加与文档打开，比每页独立起一次快得多。
 
+## 十三、从现成分层 SVG 直接进（跳过 Illustrator）
+
+本链路的入口通常是 `.ai`，靠第二节的 Illustrator 脚本转出 SVG。但手头**已经是分层 SVG** 时（Figma 直接导出、设计那边给的分层稿、或上一轮从 PDF 转出来的中间产物），第二节整段可以跳过，直接从第三节（后处理）往后走。004 那页就是这么做的，一次过。
+
+代价是要自己决定三件 Illustrator 脚本本来会替你想掉的事：
+
+**1. 哪些东西该拍平**
+
+Rive 不吃 `filter` / `mask` / `clipPath` / 内嵌 `<image>`。分层 SVG 里这些会散落在不同位置，处理方式不同：
+
+| 出现位置 | 处理 |
+|---|---|
+| 整幅背景（底色 + 照片 + 渐变） | 整组渲染成一张画布尺寸的 PNG，当**最底层**铺进去 |
+| 组内的阴影 / 模糊（`filter`） | 上游已烘焙成位图就按普通位图走第七节；没有就得自己烘 |
+| `<g mask="url(#…)">` | 删掉 `mask` **属性**保留内容；**别只删 `<defs>` 里的 `<mask>`**（见第十四节） |
+
+**2. 文字已经是轮廓了吗**
+
+Figma 导出的 SVG 通常已经是 `<path>`，没有问题；如果里面还有 `<text>` 或 `<font>`，先转轮廓或裁掉，规则同第四节。
+
+**3. 拆成几份导**
+
+一份大 SVG 会把导入器拖死。按命名组拆，每份 30–60 KB，一份一个 `addSvgInstance`。好处不只是稳：**拆开后每组在 Rive 里天然就是独立的顶层组**，做动效时好选。
+
+### 层序：新对象追加到末尾，不是"垫底"
+
+文档别处常写"新对象默认垫底"，容易被读成"它会跑到最底"。更准确的说法是：**新对象追加到画板 `children` 的末尾，而 `children` 的顺序就是绘制顺序 top → bottom**。所以追加到末尾 = 画在最下面，**先加的反而在上面**。
+
+由此有个很省事的推论：**按"目标从上到下"的顺序依次添加，层序自动正确**，不需要逐个 `sendToFront`。004 的落位顺序（左边先加）：
+
+```
+car → fx → album → 底部导航栏 → 地图区域 → 左侧信息面板 → 顶部状态栏 → bg_plate
+```
+
+背景板最后加，天然沉到最底。要事后调整，`reorder_objects` 的参数是 **`operations` 数组**：
+
+```json
+{ "operations": [ { "objectId": "32-12", "order": "sendToBack" } ] }
+```
+
+传 `{"objects": [...]}` 会报 `operations must be an array`。
+
+> 这个模型也有代价：**位图没法插回它原本所在的组内部**。004 的投影（`fx`）本来在地图组里、压在车辆下面，现在只能放在所有组之上。视觉上无感（一层柔和暗影），但严格说层序和源文件不同。要精确还原，得把该组从图片位置切成上下两段分别导入。
+
+## 十四、导入卡死：判据与自救
+
+**症状**：`addSvgInstance` 迟迟不返回（客户端先超时），之后每次导入都回 `An SVG import is in progress for this file. Wait for it to finish, then retry.`，`undo` 报 `Undone` 但解不开。
+
+**判据（关键，能省掉反复重试）**：卡住时**读取类调用照常秒回**（`session_info` / `get_artboard_hierarchy` / `query_property_values`），**渲染类调用全部挂住**（`addSvgInstance` / `capture_artboard`）。出现这个组合就是编辑器主线程被这次导入占住了——不是网络、不是 token、不是权限问题，重试和改参数都没用。
+
+**两个真因**（本轮各中一次）：
+
+1. **SVG 里有指向已删除 defs 的悬空引用**。为绕开"Rive 不导入 `filter`/`mask`"把 `<mask>` 从 `<defs>` 删了，却留下 `<g mask="url(#mask0)">`——导入器就此永久阻塞。**删 defs 时必须同步清掉所有引用属性。**
+2. **单次导入太大**。一份 154 KB / 78 条路径（其中一条 58 KB）的 SVG 把导入器拖死；按命名组拆成 4 份（26–62 KB）后每份都是秒级。
+
+**自救**：`undo` 解不开，只能重启 Rive 桌面端。文件是云文档，已导入的对象不会丢，重启后接着导即可。注意重启后 `capture_artboard` 可能先报一段时间的 `has no drawable area`（见下节），等它自愈。
+
+**预防**：
+
+```bash
+grep -o 'mask="url(#[^)]*)'  x.svg        # 列引用
+grep -o '<mask id="[^"]*"'   x.svg        # 对照 defs 里还剩什么，两边必须一一对上
+```
+
+## 十五、几个不报错的失败（都踩过）
+
+| 动作 | 失败长什么样 | 正确做法 |
+|---|---|---|
+| `upload_asset` 传中文文件名 | 报 `Invalid argument(s): Illegal percent encoding in URI` | data URI 的 `name=` 只用 ASCII（`004_g0.svg`）；Rive 里想要的图层名走 `addSvgInstance` 的 `name` 参数，那个可以是中文 |
+| 刚 `addImageInstance` 就写 `sx/sy` | 返回 `success: true`，值没变（回读还是 100） | 写完回读，不对就再写一次。**不只是"批量写"会失败，新节点刚建好时也会被吞** |
+| 烘焙图是目标的 N 倍 | 位置对、尺寸大 N 倍 | 缩放 = `100 × 目标宽 / 位图真实像素宽`；004 是 4 倍 → 25% |
+| 换掉某张位图 | —— | 写 `206` 指向新资产即可，`x/y` 不动；但**缩放要重新确认**，新图素尺寸未必一样 |
+
+
 ## 来源
 
 - Adobe 官方示例脚本 SaveAsSVGs.jsx（`exportFile` + `ExportOptionsSVG` 用法）
@@ -426,3 +562,4 @@ delete_objects({"objectIds": ["3-133069"]})     # 这是资产 id，不是图形
 - 第二至五节为本机实测（2026-10-26）
 - 第六至十一节为本机实测（2026-10-29）：3 个 2048×1152 启动页、矢量 450–515 对象/页 + 2 张位图；`addSvgInstance` 丢图、原点偏移半个图标、圆角遮罩 124×124 r=20.571、像素差 0.10–0.14/255 均为该批实测值
 - 第十二节耗时数据为本机实测（2026-10-29，同一台机器）：逐步骤用 `Stopwatch` / `time.perf_counter` 计时，取单次值；机器负载会让绝对值浮动，但各步骤之间的比例关系稳定
+- 第十三至十五节为本机实测（2026-11-03）：1 个 2560×1440 车机页（`004.ai` → 分层 SVG，5 个命名组、4 张位图、7829 对象），入口跳过 Illustrator。样本值：车辆可见框 `(1623,153.5) 114.5×47.5`（`<image>` 写的是 `1751.82,53.45 246.88×139.51` + `rotate(89.815)` + clip）、专辑 `64×64`、投影 `145×84`；源 SVG vs 参考图基线 **1.40**、Rive 结果 **1.43**；导入卡死两次（悬空 `mask` 引用 / 154 KB 单份 SVG），重启桌面端后恢复；`capture_artboard` 全线 `has no drawable area` 持续约 40 分钟后自愈

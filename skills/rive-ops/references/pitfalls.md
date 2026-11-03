@@ -151,6 +151,16 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **想删资产 / 找"删资产"的命令** | `assets_tool` 的 command 枚举里**没有 delete**（只有 list/query/add*） | 资产也是对象，直接用 `delete_objects({"objectIds":["3-133069"]})`；删前先扫一遍 `206` 引用数 |
 | **新建画板跑到画布别处，不在想要的位置** | `createArtboard` **自动放到空闲区域**（这次是 x=9773），`x/y` 参数官方建议别传 | 建完立刻 `arrangeArtboard` 摆到目标坐标；画板列表顺序按 **id 数值**排（`4-14` → `4-957`），不按创建顺序 |
 | **想确认某资产还能不能删** | 只看 `listAssets` 看不出来，没有引用计数 | 逐画板 `find_objects type=image` + 批量 `query_property_values`（键 `206`），计数 0 才删；SVG 资产例外——`addSvgInstance` 是**一次性展开**，节点上没有资产键，删了不影响已生成的图形 |
+| **`upload_asset` 报 `Illegal percent encoding in URI`** | data URI 的 `name=` 里有中文 | `name=` 只写 ASCII（`004_g0.svg`）；Rive 里想要的图层名走 `addSvgInstance` 的 `name` 参数，那个可以是中文 |
+| **位图导入后比目标大好几倍** | 烘焙图是目标的 N 倍（超采样），`sx/sy` 还停在 100 | 缩放 = `100 × 目标宽 / 位图真实像素宽`（4 倍图 → 25%）；回读 `810`/`811` |
+| **刚 `addImageInstance` 就写 `sx/sy` 不生效** | 新节点属性尚未就绪，写入被静默吞掉 | 写后回读，不对就再写一次。**不只是"批量写"会失败，新节点也会** |
+| **位图按 `clipPath` 手算出来是空白 / 偏到画外** | 图片是 pattern 填充：`clip-path` 与 `transform="rotate()"` 叠加，可见区不等于任一个矩形 | **别手算**：单张图 + 全 defs 铺满画布透明渲染，取 alpha `getbbox()`（[详见](asset-import.md)） |
+| **裁出来的 PNG 全透明，Rive 里只有空图层** | 裁剪坐标被二次缩放，裁到画布外，PIL 越界补透明——尺寸对、内容空 | 裁完断言 `alpha>8` 像素数 > 0；`addImageInstance` 后也看一眼位图，别只看尺寸 |
+| **导入卡在 `An SVG import is in progress` 永不释放** | ① SVG 里有指向**已删除 `<mask>`** 的悬空引用 ② 单份 SVG 太大（154 KB 实测拖死） | 删 defs 时同步删 `mask=` / `filter=` 引用属性；按命名组拆分（单份 <60 KB）；`undo` 解不开，只能重启桌面端（[详见](asset-import.md)） |
+| **判断导入是"卡死"还是"太慢"** | 读取类调用秒回（`session_info`/`get_artboard_hierarchy`）、渲染类全挂（`addSvgInstance`/`capture_artboard`）= 编辑器主线程被占 | 别重试、别改参数；按上一条处理 |
+| **`capture_artboard` 对*所有*画板都报 `has no drawable area`** | 整机级离屏渲染故障，不是某块画板的问题（单画板才有"未激活/`810` 卡 0"两种） | 判据：所有画板的 `810`/`811` 都是 0；**别删画板重建**，等它自愈 |
+| **像素验收按 `mean < 0.5` 判会把正确结果判成失败** | 阈值是绝对值；源 SVG 自己对参考图就有差异（本次基线 1.40） | 先量「源 SVG vs 参考图」基线，判据改成 `≤ 基线 + 0.3` |
+| **`reorder_objects` 报 `operations must be an array`** | 参数是 `operations[]`，不是 `objects` | `{"operations":[{"objectId":"x","order":"sendToBack"}]}`；顺带：新对象追加到 `children` 末尾（= 最底），**按"目标从上到下"依次添加，层序自动正确** |
 
 ## 八、画板指纹（核验口径）
 

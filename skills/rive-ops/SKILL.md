@@ -27,7 +27,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 画板体检 / 搬运后核验 | `scripts/rive-audit.ps1`（八项指纹 → TSV） | `references/audit.md` |
 | 跨文件搬画板 | `export_file(rev)` → `scripts/rive-import.ps1` → 删多余 → 指纹核验 | `references/transfer.md` |
 | 整文件合并且**不清空**目标 | `rive create --from-rev` 拆两个工程 → `scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push` | `references/merge.md` |
-| Illustrator 素材导入 | `scripts/ai-svg-export.ps1 -OutlineText` → `svg-prep.py clean/images/clip` → data URI 上传 → `addSvgInstance` 铺矢量 → 位图单独 `addImageInstance` + 三坑 → `svg-prep.py verify` | `references/asset-import.md` |
+| Illustrator 素材导入 | 两个入口：`.ai` 走 `scripts/ai-svg-export.ps1 -OutlineText`；**手头已是分层 SVG 就直接从 `svg-prep.py` 起**。→ `clean/images/clip` → data URI 上传（`name=` 用 ASCII）→ **按命名组拆分** `addSvgInstance`（单份 <60 KB）→ 位图单独 `addImageInstance` + 五坑 → 像素比对 | `references/asset-import.md` |
 | 导出 `.riv` 交付 | Publish 导出 → 组件规则 → 字体 Embedded → 运行时验收 | `references/delivery.md` |
 | 运行时验收 | `assets/runtime-check-index.html` + 本地静态服务器 + Edge 无头截图 | `references/delivery.md` |
 | 选运行时 / 上车机 | `webgl2` 优先，同屏多实例加 `useOffscreenRenderer`；Qt / Android / WebView 三条路线 | `references/runtime.md` |
@@ -63,12 +63,18 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 24. `rive pull` 在 1.8.0 必崩；拆工程用 `rive create <dir> --from-rev=<x.rev>`。`rive push --name` 只收 ASCII；CLI **没有删除远程文件**的命令，联调草稿会留在云端。
 25. 同一 id 在目标里是顶层、在来源里嵌在画板内（或反之），合并后会出现重复 id，动画静默绑错对象——对已占用的 id 重新分配并重写子树引用，不能只按顶层判冲突。
 26. **`addSvgInstance` 静默丢弃内嵌 `<image>`**：矢量全在、位图 0 个 Image 节点、不报错。位图必须 `upload_asset`(data URI) + `addImageInstance` 单独进；判据是数一遍 `types` 含 `Image` 的节点。
-27. 图片实例的 `x/y` 是**原点**位置（`380/381` 默认 `50/50` 在中心）→ 填 `left+w/2, top+h/2`；`addImageInstance` **不接宽高**、按位图原生像素进场 → 回写 `sx`(16)/`sy`(17) 并回读 `810/811`；新加对象默认**垫底** → `sendToFront`。
+27. 图片实例的 `x/y` 是**原点**位置（`380/381` 默认 `50/50` 在中心）→ 填 `left+w/2, top+h/2`；`addImageInstance` **不接宽高**、按位图原生像素进场 → 回写 `sx`(16)/`sy`(17) 并回读 `810/811`；**新加对象落在 `children` 末尾 = 最底**，层序靠添加顺序排（铁律 36）。
 28. **`clipPath` 不会被导入**：建出来的 Shape 是空的，圆角/异形遮罩要在位图 alpha 里烘焙（`svg-prep.py clip` 直接给几何）。
 29. **AI 的中文图层名会变成方块**：导出时写成逐字节字符引用（声明 `iso-8859-1`），落成 `0x80–0x9F` 控制字符。只有图层名是中文的素材会中招，`rename_objects` 改回。
-30. **素材导入的验收是像素比对**：`.ai` 导 PNG24 当参考图，两侧 resize 到画板尺寸算平均差。正确 0.10–0.14/255、错位 2.5–3.2/255，阈值 `0.5`。
-31. `capture_artboard` 报 `has no drawable area`：一是画板未激活，二是该画板 `computedwidth/height`(810/811) 卡成 0 —— 写 w/h、`resizeArtboard`、改缩放都刷不回，**只能删画板重建**。
+30. **素材导入的验收是像素比对**：参考侧导出 PNG，两侧 resize 到画板尺寸算平均差。**阈值是相对基线，不是常数**——先量「源 SVG vs 参考图」，判据取 `≤ 基线 + 0.3`。2048×1152 启动页基线≈0.1、结果 0.10–0.14；2560×1440 车机页基线 **1.40**、结果 **1.43** 同样 PASS。拿绝对 `0.5` 判会误杀后者。
+31. `capture_artboard` 报 `has no drawable area`：①画板未激活（先 `focusArtboard`）②该画板 `computedwidth/height`(810/811) 卡成 0 ③**整机级离屏渲染故障**——判据是连以前能截的对照画板也挂、**所有**画板 810/811 都为 0。③别按①②的结论删画板重建（会白删），它**会自愈**，本轮约 40 分钟后恢复。
 32. **导入慢先量再优**：一页 531 对象全链路 9.6 s（导出 4,893 / `upload_asset` 1,289 / `addSvgInstance` 2,213 / `verify` 321 ms）。`upload`+`addSvgInstance` 占 36% 且都在解析同一份 SVG，瘦身上游能一次降两处。但**别把单步当瓶颈**：同一批步骤用现成脚本 9.6 s、现写脚本实跑 65 s，差额全在"读输出→写脚本→再跑"的循环里。详见 `references/asset-import.md` 第十二节。
+33. **位图的可见框 ≠ `<image>` 上的 `x/y/width/height`**：Figma 的 pattern 填充会叠 `clip-path` + `transform="rotate()"`。004 的车按 clip 矩形算出来是**空白**、按 `<image>` 矩形放**偏到画外**，真实是 `(1623,153.5) 114.5×47.5`。→ **别手算**：只放这一张图 + 全 `<defs>`、铺满画布透明渲染、取 alpha `getbbox()`。
+34. **裁完必须断言"不是空的"**：`getbbox()` 是**该图自身像素坐标**，换算画布坐标时多乘一次缩放就裁到画布外——`PIL` 补透明，得到尺寸对、内容全空的 PNG，而资产 id / 节点 / `810`/`811` 全都正常。判据 `alpha.max() == 0`。
+35. **导入卡在 `An SVG import is in progress` 永不释放**：判据是**读取类调用秒回**（`session_info`/`get_artboard_hierarchy`）、**渲染类全挂**（`addSvgInstance`/`capture_artboard`）= 编辑器主线程被占。两个真因：SVG 里有指向**已删除 `<mask>`** 的悬空引用；单份 SVG 太大（154 KB 拖死，拆成 4 份 26–62 KB 秒过）。`undo` 解不开，**只能重启桌面端**。
+36. **层序**：`children` 的顺序是 top→bottom，新对象**追加到末尾 = 最底**，所以"先加的反而在上面"。→ **按"目标从上到下"依次添加，层序自动正确**，不用逐个 `sendToFront`。事后调整：`reorder_objects` 的参数是 **`operations[]`**，传 `objects` 报 `operations must be an array`。代价：位图插不回原组内部。
+37. **`upload_asset` 的 data URI 里 `name=` 只收 ASCII**：中文报 `Illegal percent encoding in URI`。Rive 里想要的图层名走 `addSvgInstance` 的 `name` 参数（那里可以是中文）。
+38. **刚建好的节点立刻写属性会被吞**（不只是"批量写"）：`addImageInstance` 后马上写 `sx/sy` 返回 `success: true` 但值不变 → 写后回读，不对再写。另：烘焙图是目标的 N 倍时，缩放 = `100 × 目标宽 / 位图真实像素宽`（4 倍图 → 25%）。
 
 ## 3. 脚本速用
 
@@ -136,12 +142,16 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **位图偏左上半个 / 截图里看不见 / 尺寸不对** | 原点在中心、新对象垫底、按原生像素进场（铁律 27） |
 | **圆角图标导入后白底直角外露** | `clipPath` 不导入；用 `svg-prep.py clip` 取几何烘焙 alpha（铁律 28） |
 | **Layers 里中文名变方块** | 中文图层名被逐字节转义成控制字符；`rename_objects`（铁律 29） |
+| **位图导进去了，但编辑器里是空的** | 裁剪坐标二次缩放，PNG 全透明（尺寸却对） | 裁完断言 `alpha>8` 像素数 > 0（铁律 34） |
+| **位图偏到画外 / 按 clipPath 算出来是空白** | 可见框 ≠ `<image>` 矩形（pattern + rotate 叠加） | 隔离渲染取 alpha bbox（铁律 33） |
+| **导入卡在 in progress，之后所有导入都被拒** | 悬空 `mask` 引用、或单份 SVG 过大 | 清引用属性、按组拆分；只能重启桌面端（铁律 35） |
+| **所有画板截图都报 `has no drawable area`** | 整机级离屏渲染故障，不是画板问题 | 别删画板，等它自愈（铁律 31） |
 
-完整 46 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 56 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/36 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/56 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
