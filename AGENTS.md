@@ -88,6 +88,16 @@
 ## 常用命令
 
 ```powershell
+
+# ⛔ 第一铁律：Rive MCP 调用绝不猜形状
+
+**任何 MCP 工具调用的 `data` 结构，必须先离线读契约再发**（`probe/tools.json` 里每个工具的 `inputSchema.properties.data` 就是完整契约，不需要 Rive 运行）。猜错形状的代价是分级的：
+
+- 轻则**静默丢弃**：字段被忽略、返回 success 但什么都没发生（坑位 33：createViewModels 内联 properties）；
+- 重则**编辑器闪退**：用户丢历史、全链路返工（2026-11-04 实测两次：addProperties 猜形状直接崩）。
+
+流程：**读 schema → 按契约发 → 回读验证**。三步缺一不可。
+
 # MCP 是否在线
 Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 
