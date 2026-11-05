@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-03 v1.5.2 —— AI 素材导入链路补上「服务端转换」这一层（`<use>` 不解析、转换失败即终局、defs 引用闭包裁剪、`addImageInstance` 不回 id）：README 12 主题、坑位表 62 行（不含表头）、结论先行 45 条、references 12 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-05 v1.6.0 —— 新增「车尾沙尘」效果（sand/dust 双层、跟随路径车辆、分桶批绘、实测性能）：README 12 主题、坑位表 65 行（不含表头）、结论先行 45 条、references 13 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。

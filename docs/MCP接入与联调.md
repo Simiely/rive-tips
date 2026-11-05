@@ -77,7 +77,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791
 8. **`upload_asset` 只认 data URI**。传本地文件路径会返回 `{"success":true,"asset":{"id":"0-0",...}}`——假 id，资产列表里也找不到，而 `success: true` 很有迷惑性。正确形态：`data:image/svg+xml;name=x.svg;base64,<...>`。**上传后必须 `listAssets` 复查**。
 9. **`capture_artboard` 存在"渲染失败家族"**：部分画板稳定输出纯黑或 403 `UNACCESSIBLE`，与内容无关（隐藏文字、重绑字体、改尺寸都不能解），疑似 Early Access 离屏渲染 bug。遇到黑屏先看**编辑器里**是否可见，别对着黑屏改数据。
 10. **批量 `set_property_values` 可能静默失败**：返回 `{"success":true,"values":{}}` 但实际没写入。所有写入必须**回读验证**；逐个写比批量稳。
-11. **`delete_objects` 也能删资产 ID**：把 `assets_tool/listAssets` 返回的资产 id 传进去即可，官方文档只写“删对象”。删前导 `.rev` 备份，删后回读 `206`/`279` 核验；假 `0-0` 幽灵条目删不掉，重启 App 后消失。
+11. **`delete_objects` 也能删资产 ID**：把 `assets_tool/listAssets` 返回的资产 id 传进去即可，官方文档只写“删对象”。删前提醒用户存快照，删后回读 `206`/`279` 核验；假 `0-0` 幽灵条目删不掉，重启 App 后消失。
 12. **`upload_asset` 重名会返回假 `0-0`**（data URI 也一样）：先传唯一名，再用属性键 `203` 改回原名；上传后 `listAssets` 复查。
 13. **字体资产也是“对象”**：`TextStylePaint.fontassetid=279`、资产名 `203`、导出类型 `358`、Include `360`、CDN `362`/`359`；`size=211` 恒为 0。字体子集化与重绑见 [性能诊断与资产瘦身](性能诊断与资产瘦身.md)。
 14. **面板 `Not Found`/转圈不等于数据缺失**：先用 `export_file(rev, embed_assets=true)` 拆包验证；旧资产记录卡住时重传同字形/子集化，不要改 DNS 或反复重传。

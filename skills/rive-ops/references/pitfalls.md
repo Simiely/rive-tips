@@ -121,7 +121,7 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **截图/导出对某些画板永远黑屏或 403** | Early Access 离屏渲染 bug，与内容无关 | 编辑器里看内容为准；换对照画板确认服务没挂 |
 | **写入"成功"但没生效** | 批量 `set_property_values` 静默失败 | **写入后必须回读验证**，逐个写更稳 |
 | **打开文件慢 / 素材转圈** | 桌面编辑器无素材磁盘缓存，每次从云端拉全量资产 | 先做资产审计，删未使用资产，必要时字体子集化（[详见](performance.md)） |
-| **`delete_objects` 能删资产 ID** | 官方只写删对象，实测资产 ID 也可删 | 删前导出 `.rev` 备份，删后回读 `206`/`279` 核验（[详见](performance.md)） |
+| **`delete_objects` 能删资产 ID** | 官方只写删对象，实测资产 ID 也可删 | 删前提醒用户存快照，删后回读 `206`/`279` 核验（[详见](performance.md)） |
 | **`upload_asset` 重名返回假 `0-0`** | 已存在同名资产（data URI 也一样） | 换唯一名上传，再用属性键 `203` 改回原名；幽灵条目重启后消失 |
 | **字体一直转圈 / Not Found** | 旧字体资产记录卡住，不是字体文件损坏 | fontTools 验证；重传同字形/子集化后重绑 `279`；不要改 DNS |
 | **字体加载慢** | 4 个 CJK 字体 31.5 MB，冷下载 | 按实际用字子集化：8 MB → 约 60 KB（[详见](performance.md)） |
@@ -167,6 +167,9 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **`<use>` 展开后是空组（0 条 path）** | 它引用的字形定义在上游 `clean` 阶段随 `<font>` 块被裁掉了 | 这份 SVG 本来就没有这些矢量，内容只存在于烘焙位图里；跳过该组，别反复重试 |
 | **分组 SVG 体积异常大（130–200 KB）** | 每组都携带整份 `<defs>` | 按 `url(#…)` / `href="#…"` 引用闭包裁剪，只留本组走得到的；实测 199 KB → 1.8 KB，渲染不变 |
 | **`addImageInstance` 的返回里没有 `nodeId`** | 返回体缺字段，但节点确实建好了 | 回读 `children` 按 `name` 取 id 再写属性，别对 `None` 调 `set_property_values` |
+| **粒子没有跟着移动对象** | 物体位姿只在它自己的脚本里算（本案例 `car_probe` 的 `PATH`+`sampleAt`），另起脚本拿不到 | 发射/更新/绘制都放进对象脚本，共用同一坐标空间 |
+| **关掉一条粒子线后另一条"冻住"** | 时间推进写在 `if not ENABLED then return end` 之后，`self.t` 不再增长，噪声力场静止 | `self.t += dt` 放在开关判断**之前** |
+| **逐粒渐隐画不出来** | `drawPath` 一次调用共享一个 Paint，整批同透明度 | 分年龄桶（有损）或 `drawImageMeshInstanced` 的 per-instance opacity（精确）；官方无 compute |
 
 ## 八、画板指纹（核验口径）
 
@@ -200,3 +203,89 @@ Image 节点（位图实例）常用键：
 | computed 宽 / 高（只读，判定是否落地） | `810` / `811` |
 
 资产审计与字体子集化的完整流程见 [性能诊断与资产瘦身](performance.md)。
+
+## 九、脚本动画速查（2026-11 批次）
+
+> 追加到 `docs/速查表.md` 末尾的内容。主题详解见 `程序化动画Luau脚本.md`、`关键帧动画MCP实操.md`。
+
+## 脚本动画速查
+
+### 铁律
+
+| # | 规则 | 违反症状 |
+|---|---|---|
+| 1 | Path/Paint 在 `init` 创建，`draw` 只读 | 工厂对象被实例共享；late() 缺失加载失败 |
+| 2 | `drawPath` 后本帧不得 reset/moveTo 该 Path | 全黑、0 error |
+| 3 | 多绘制档各自一套 Path | 后档 reset 擦掉前档已提交几何 |
+| 4 | `Color.rgba` alpha 是 **0–255** | 0–1 写法=几乎全透明，误判为"没渲染" |
+| 5 | 脚本路径**顺时针**填充（y 向下）；Paint 无 fillRule | 逆时针 fill 不可见 |
+| 6 | 模块级 `local X: { number } = {...}` | Luau 编译器段错误（exit 139 零输出） |
+| 7 | `draw` 只在播放/重绘时调用；`capture_artboard` 不执行脚本 | 静态截图验证不了脚本 |
+| 8 | Path Effect 的 `advance` 必须 `context:markNeedsUpdate()` | 效果"冻结" |
+| 9 | Design 模式 `advance` 的 `seconds` 恒 0 | 除以 seconds 直接 NaN |
+| 10 | 删 ScriptAsset 连带删节点；改 `scriptAssetId`(键848) 不重绑 | 节点消失 / init 跑 draw 不来 |
+
+### 协议判定
+
+```lua
+-- Node：init(self, context)->bool, advance(self, seconds)->bool, draw(self, renderer)
+-- Layout：同 Node + measure(), resize(self, size, scale)
+-- PathEffect：update(self, inPath: PathData) -> PathData
+return function(): Node<T> return { ...字段, init=init, advance=advance, draw=draw } end
+```
+
+`late()`：凡在 `init` 里赋值的字段，工厂里一律 `字段 = late()`。
+
+### 关键属性键
+
+`848`=scriptAssetId（ScriptedDrawable）、`18`=opacity、`13/14`=xy、`16/17`=scale、`23`=blend(12=plus)、`47`=thickness、`747`=blendmode(12=additive)、`41`=visible、`20/21`=path w/h、`470`=stroke position。
+
+### MCP 能/不能（脚本相关）
+
+| 能 | 不能 |
+|---|---|
+| `manage_scripts` 建/删/改名脚本文件 | 新建脚本节点（只能画板右键菜单） |
+| `get_scripts` 查协议类型（node/utility/…） | 挂 Path Effect 到 Stroke（属性键无槽） |
+| `recompile_all_scripts` | 改 `scriptAssetId` 后重绑运行时实例 |
+
+### 排查顺序
+
+```
+CLI: rive <dir> --verify        ← 拿带行号的类型错误（script_diagnostics 不可信）
+MCP: get_scripts → type==node?  ← utility=加载失败，不进右键菜单
+编辑器: Console 看 print         ← init/draw 是否真的跑
+```
+
+### 描边流动 = Path Effect 复刻 setLineDash
+
+```lua
+local PERIOD, DASH, SPEED = 240, 52, 100     -- 240 是 dash 周期，不是路径总长
+local off = self.off % PERIOD
+-- 亮段：d - off ∈ [k*240, k*240+52]，逐段 positionAndTangent 采样
+-- 转角平滑：cubicTo(p0+t0*h, p1-t1*h, p1)，h=ds/3（Hermite，~1px 一段）
+-- advance 里 context:markNeedsUpdate()
+```
+
+### 平滑辉光 = 多层薄叠加
+
+渐变/feather 走 MCP 不可靠。N 层同心薄圆 + additive：层间半径差 <2px、每层 alpha ≤3/255（N=24 中心累积 ≈0.17）。**恒定亮度只变半径** = alpha 固定、半径进公式。
+
+### 关键帧循环防倒飞
+
+两趟动画边界帧会被按帧去重（起点覆盖终点）→ 终点丢失 → 可见倒飞。每趟占 `[base, base+L-1]`，下一趟从 `base+L` 起；归位 1 帧内完成且两端 opacity=0。
+
+### 桌面版闪退取证（2026-11 实测）
+
+Rive 桌面版是 **Flutter 应用**（MSIX 包 `com.flutter.riveeditor`），闪退时**默认零取证**：无 dump、无日志、无 WER 报告（系统级 `C:\ProgramData\Microsoft\Windows\WER` 全历史零记录，已交叉验证）。运行时问题的官方入口是编辑器内 **Debug Panel**（Console / Problems / Changes 三页，Problems 显示代码问题与断掉的绑定）。
+
+要拿到闪退税因，一次性配置 **WER LocalDumps**（管理员终端）：
+
+```powershell
+$key = "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\com.flutter.riveeditor_g2vzrvmhnrrvc"
+New-Item -Path $key -Force | Out-Null
+Set-ItemProperty -Path $key -Name DumpFolder -Value "$env:LOCALAPPDATA\CrashDumps"
+Set-ItemProperty -Path $key -Name DumpType -Value 2      # 完整 dump
+Set-ItemProperty -Path $key -Name DumpCount -Value 5
+```
+
+配置后每次闪退自动落完整 `.dmp` 到 `%LOCALAPPDATA%\CrashDumps`，可分析崩溃模块与调用栈。事件日志（Application）只有 Rive 自己的启动记录（RiveNativePlugin / D3D device init），无死因。

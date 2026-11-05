@@ -95,7 +95,7 @@ scripts/rive-mcp.ps1 -Tool delete_objects -ArgsJson '{"objectIds":["0-144658","0
 
 流程：
 
-1. 先导出 `.rev` 备份（带 `embed_assets: true`）。
+1. 先提醒用户在 Rive 里存快照（默认不导出 `.rev` 备份）。
 2. 按第二节算出“未被任何 Image/TextStylePaint 引用”的资产 ID。
 3. 一次 `delete_objects` 批量删除；返回 `success` + `deleted` 列表。
 4. 回读核验：9 个 Image 节点 `206`、113 个文本样式 `279` 全部指向现存资产。
@@ -215,7 +215,7 @@ scripts/rive-mcp.ps1 -Tool query_property_values -ArgsJson '{"propertyKeys":{"0-
 # 文本样式 -> 字体
 scripts/rive-mcp.ps1 -Tool query_property_values -ArgsJson '{"propertyKeys":{"0-38718":[279]}}'
 
-# 删资产（先备份 .rev）
+# 删资产（先提醒用户存快照）
 scripts/rive-mcp.ps1 -Tool delete_objects -ArgsJson '{"objectIds":["0-144658"]}'
 
 # 上传字体/SVG/图片（data URI）
@@ -227,9 +227,9 @@ scripts/rive-mcp.ps1 -Tool export_file -ArgsJson '{"format":"rev","destination":
 
 ## 九、回滚
 
-- 删资产前导出的 `.rev` 是完整快照；需要恢复时把它导入文件浏览器（上传）即可。
-- 字体子集化前的全量字体保留在 `.rev` 里；恢复全量字体 = 重新上传字体 + 重绑 `279`。
-- 所有删除/重绑操作都要先备份、后回读验证；不要凭 `success: true` 判断成功。
+- 默认不导出备份；改动/删除前提醒用户存快照。用户若已在 Rive 里存快照，需要恢复时把快照导入文件浏览器（上传）即可。
+- 字体子集化前提醒用户存快照；恢复全量字体 = 重新上传字体 + 重绑 `279`。
+- 所有删除/重绑操作都要先提醒存快照、后回读验证；不要凭 `success: true` 判断成功。
 
 ## 来源
 

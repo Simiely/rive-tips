@@ -37,6 +37,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
+> **备份策略**：默认**不导出** `.rev` 备份（`export_file` 走网络、易超时/失败）。任何写入或删除前，提醒用户自行在 Rive 里存快照；是否备份由用户决定，不阻塞改动。
+
 1. `capture_artboard` 前必须 `focusArtboard`，否则返回**空白图**（连 `backgroundColor` 都不生效）；整幅纯黑是另一类问题，见铁律 12。
 2. `animation_editor` 只作用于**活动画板**，`data.artboardId` 被静默忽略。
 3. `export_file` 的 `destination` 传**目录**，不是文件路径。
@@ -54,7 +56,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 15. PowerShell 5.1 读无 BOM 的 UTF-8 脚本会按 ANSI 解析——脚本输出用 ASCII，中文结果写文件再看。
 16. 桌面编辑器**没有素材磁盘缓存**；每次打开从云端拉全量资产。打开慢先做资产审计，不要先改 DNS 或装系统字体。
 17. `delete_objects` 也能删**资产 ID**（实测）；`upload_asset` 重名返回假 `0-0`，换唯一名后再用属性键 `203` 改名；幽灵 `0-0` 重启后消失。
-18. 字体一直转圈 / Not Found 先验证字体文件；旧资产记录卡住时重传/子集化。子集化后必须校验字符覆盖、回读 `279`、截图对比，并保留全量字体 `.rev`。
+18. 字体一直转圈 / Not Found 先验证字体文件；旧资产记录卡住时重传/子集化。子集化后必须校验字符覆盖、回读 `279`、截图对比，并提醒用户存快照。
 19. 按压动效总时长 500ms = 按下 200ms + 抬起 300ms；不要做成 42 帧（200 + 500）。
 20. 多个开关按钮必须一按钮一层状态机；同一个 Layer 塞多个按钮只能有一个保持激活。
 21. 点击切换用 Listener Action Script 读 boolean 取反；脚本类型必须是 listenerAction，`context:viewModel()` 前必须绑定 ViewModel。
@@ -80,6 +82,9 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 41. **`<use>` 展开后可能是空组**：引用的字形轮廓躺在 `<font>` 里、已被上游按"Rive 不消费 `<font>`"裁掉。展开后 0 条 `path` 就跳过，别重试（3 次 × 4 秒白等）。
 42. **每组 SVG 别携带整份 `<defs>`**：按 `url(#…)` / `href="#…"` 引用闭包裁剪，只留本组走得到的。005 从 130–199 KB/组降到 1.3–1.8 KB，渲染不变。
 43. **`addImageInstance` 可能不回 `nodeId`**（节点已建好）→ 回读 `children` 按 `name` 取 id。另：无 `clip`/`transform` 的位图直接取**原生像素**（scale 100%），比隔离渲染更准更省。
+44. **粒子要跟随移动物体**：位姿只在对象脚本里算得出（本案例 `car_probe` 的 `PATH`+`sampleAt`），发射/更新/绘制都写进该脚本，别在另一个脚本里猜坐标。
+45. **时间推进必须在开关判断之前**：`self.t += dt` 若放在 `if not ENABLED then return end` 之后，关掉一条粒子线会让另一条的噪声场冻结。
+46. **`drawPath` 批绘共享透明度**：逐粒渐隐只能分年龄桶（有损）或用 `drawImageMeshInstanced` 的 per-instance opacity（精确）；官方无 compute、无 noise API，湍流需自写。
 
 ## 3. 脚本速用
 
@@ -139,7 +144,7 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | 新建画板跑到了画布别的角落 | `createArtboard` 自动挑空位（`x/y` 别传），建完用 `arrangeArtboard` 摆到目标坐标；`listArtboards` 顺序按 id 数值排，不是创建顺序 |
 | 字体一直转圈 / Not Found | 旧资产记录卡住；fontTools 验证后重传/子集化；不要改 DNS |
 | 本机装同名字体无效 | 编辑器只用 Google Fonts / 上传字体；本地字体仅 CLI 项目可用 |
-| 要删未使用资产 | `delete_objects` 传资产 ID；删前备份 `.rev`，删后回读 `206`/`279` |
+| 要删未使用资产 | `delete_objects` 传资产 ID；删前提醒用户存快照，删后回读 `206`/`279` |
 | `rive --verify` 无输出直接崩（exit `3221226505`） | 资产文件名转 ASCII（`gate.py --fix-names`）；再查 `exportTypeValue="referenced"` 的字体 |
 | 要在**已有内容**的文件上并入另一个文件 | 走 CLI 合并管线，不要 `upload_rev`（它要求目标为空），见 `references/merge.md` |
 | `rive pull` 崩溃 / 拿不到 CLI 工程 | 1.8.0 已知必崩；改用 `rive create <dir> --from-rev` |
@@ -155,11 +160,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 62 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 65 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/62 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/65 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序

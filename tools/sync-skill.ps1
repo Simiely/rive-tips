@@ -24,6 +24,7 @@
         数据绑定与状态机驱动.md   -> binding.md
         性能诊断与资产瘦身.md     -> performance.md
         按钮开关与按压动效.md     -> toggle-button.md
+        效果-沙尘尾流.md         -> sand-dust-trail.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     And scripts/* -> skills/rive-ops/scripts/* (same basename, top level only).
@@ -78,6 +79,7 @@ $map = [ordered]@{
     '数据绑定与状态机驱动.md' = 'binding.md'
     '性能诊断与资产瘦身.md'   = 'performance.md'
     '按钮开关与按压动效.md'   = 'toggle-button.md'
+    '效果-沙尘尾流.md'       = 'sand-dust-trail.md'
 }
 
 function Convert-DocLinks {
