@@ -127,6 +127,14 @@
 - 创建实例并 `bindViewModelToArtboard` 绑定到 Artboard。
 - 属性名用英文、稳定，代码侧会原样使用。
 
+> **MCP 能建按钮，别写成"只能手建"**（2026-11-05 按本地 `tools/list` 契约核实）：
+> - 形状：`path_editor` → `createParametricShapes`（rectangle/ellipse/triangle/polygon/star，支持 `cornerRadius`、`paints`）
+> - 交互：`create_listeners` → `listenerTypes` 含 `click`/`down`/`up`；`actions` 支持 `viewModelChange`（写常量值）与 `scripted`（挂 Listener Action）
+> - 状态：`animation_editor` → `createStateMachine`/`createStates`/`createTransitions`
+> - ViewModel：`viewmodel_editor` → `createViewModels`/`addProperties`/`createViewModelInstances`/`bindViewModelToArtboard`/`databind`
+>
+> **风险**：本 Early Access 版本 2026-11-04 三次 VM 写入闪退（见 `AGENTS.md` 坑位 33）。先存快照再试；崩一次就转 UI 手动建，别再重试同一命令。
+
 ### 5. toggle 脚本
 
 ```lua
