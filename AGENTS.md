@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-05 v1.6.0 —— 新增「车尾沙尘」效果（sand/dust 双层、跟随路径车辆、分桶批绘、实测性能）：README 12 主题、坑位表 65 行（不含表头）、结论先行 45 条、references 13 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-05 v1.6.1 —— 补「按钮开关双向切换」与「SVG 轮廓中文标签」：README 12 主题、坑位表 67 行（不含表头）、结论先行 47 条、references 13 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -60,6 +60,8 @@
 43. **`addImageInstance` 的返回可能没有 `nodeId`**，但节点确实建好了 → 回读 `children` 按 `name` 取 id，别对着 `None` 去写属性。
 44. **每组 SVG 不要携带整份 `<defs>`**：按 `url(#…)` / `href="#…"` 的引用闭包裁剪，只留本组走得到的。005 从 130–199 KB/组降到 1.3–1.8 KB，渲染结果一像素不差（MAE 0.012）。
 45. **无 `clip` / `transform` 的位图直接取原生像素**（`scale` 100%），既省一次隔离渲染、又不丢分辨率；只有带 `clip` + `rotate()` 的才需要"隔离渲染 + alpha bbox"。
+46. **开关按钮只关不开** → click 监听器挂的是 `viewModelChange` 常量（false），每次点击只会重复写同一个值。改用 `scripted` Listener Action 取反（`p.value = not p.value`）；旧 listener 可用 `delete_objects` 直接删；`animation_editor queryStateMachine` 回读 `actions[].scriptAssetId`，`script_diagnostics` 必须 `[]`。"全部显示"这类单向复位继续用 `viewModelChange`，常量值在 `BindablePropertyBoolean` 键 **634**。
+47. **MCP 没有建文本对象的命令** → 中文标签用 fontTools 轮廓 + 定尺寸 SVG + `addSvgInstance`。资产尺寸 = viewBox（88×44 按钮配 42×20 / 70×17）；SVG 变换落在子 `Group`（实测 42×20 标签 `sx≈8.59%`、`x≈22`），外层 `Node` 的 `810/811` 读回 0、轮廓顶点也取不到 → 落点只能用 `capture_artboard` 验收；不要在已缩放组里再套 `translate`（宽度会炸到 276px）。
 
 ## FAQ 路由
 

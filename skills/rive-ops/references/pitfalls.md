@@ -129,6 +129,8 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **按压效果偏长** | 把 500ms 当成抬起段，做成 42 帧 | 总时长 30 帧：按下 12 帧 + 抬起 18 帧（200ms + 300ms） |
 | **多个按钮只能一个激活** | 所有按钮塞在同一个状态机 Layer | 一按钮一层；每层 Idle / Activating / Deactivating |
 | **点击切换没反应** | opacity 0 浮层不命中 / 监听器挂错 | 监听器挂 Shape；必要时加透明命中层；脚本类型必须 listenerAction |
+| **开关按钮只关不开** | 监听器 action 是 `viewModelChange` 常量 false，重复点击只是重复写 false | 改 `scripted` Listener Action（`p.value = not p.value`）；旧 listener 可 `delete_objects` 删；`queryStateMachine` 复核 `scriptAssetId`（[详见](toggle-button.md)） |
+| **MCP 做中文标签** | 工具集没有新建文本对象的命令；`addSvgInstance` 的 Node 不暴露文字包围盒 | fontTools 轮廓 → 定尺寸 SVG（88×44 按钮用 42×20 / 70×17）→ `upload_asset` + `addSvgInstance`；落点靠 `capture_artboard` 验收（[详见](toggle-button.md)） |
 | **面板 Not Found 不一定缺数据** | 后端缩略图/资产记录状态 | 用 `.rev` 拆解验证数据；渲染/导出正常就保留 |
 | **浅色主题按钮激活后不变色** | 扁平矢量没有文字对象，颜色分散在卡片和每个图标/轮廓填充上 | 按填充逐个做颜色关键帧：卡片 `#141a1a1a↔#ffd96b2b`、图标/文字 `#a61a1a1a↔#ffffffff`（[详见](toggle-button.md)） |
 | **打组后缩放跑偏** | `group_editor` 的组原点落在 `objectIds` 第一个对象上 | 把**卡片放第一个**，组原点正好是按钮中心 |

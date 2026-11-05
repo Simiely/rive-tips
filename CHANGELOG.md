@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v1.6.1 — 2026-11-05
+
+修复「003 充电中」控制按钮只能关、不能开，并补齐中文标签。
+
+### 修复
+
+- 左右两个开关按钮原来挂 `viewModelChange` 常量 false，第二次点击仍写 false → 换成 `scripted` Listener Action（`prop.value = not prop.value`）；旧监听器用 `delete_objects` 删除后重建。`queryStateMachine` 复核：`sandToggle` / `dustToggle` → `scripted`，`scriptAssetId` 正确；`script_diagnostics` 均为 `[]`。
+- 「全部显示」保留 `viewModelChange` 常量 true（`BindablePropertyBoolean` 键 634 回读 `true`）。
+- 三个按钮下移到 y=240，补「沙粒 / 灰尘 / 全部显示」标签。
+
+### 新增
+
+- `docs/按钮开关与按压动效.md` 新增 §九：只关不开的根因与修法、MCP 无文本对象时用 SVG 轮廓做中文标签（42×20 / 70×17；外层 `Node` 不暴露包围盒，落点用 `capture_artboard` 验收）。
+- `docs/速查表.md` 补 2 行，坑位表 65 → **67 行**；`skills/rive-ops/SKILL.md` 铁律 46 → **48 条**；`AGENTS.md` 结论 45 → **47 条**。
+
 ## v1.6.0 — 2026-11-05
 
 新增「车尾沙尘」效果：车沿路径移动，尾流持续喷出**沙粒**（4 色小点）与**灰尘**（无贴图柔边大圆）。官方没有粒子系统与 compute，这层完全由 Node Script + `drawPath` 组合出来，并给出可复现的性能基准。

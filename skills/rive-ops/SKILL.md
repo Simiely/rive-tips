@@ -85,6 +85,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 44. **粒子要跟随移动物体**：位姿只在对象脚本里算得出（本案例 `car_probe` 的 `PATH`+`sampleAt`），发射/更新/绘制都写进该脚本，别在另一个脚本里猜坐标。
 45. **时间推进必须在开关判断之前**：`self.t += dt` 若放在 `if not ENABLED then return end` 之后，关掉一条粒子线会让另一条的噪声场冻结。
 46. **`drawPath` 批绘共享透明度**：逐粒渐隐只能分年龄桶（有损）或用 `drawImageMeshInstanced` 的 per-instance opacity（精确）；官方无 compute、无 noise API，湍流需自写。
+47. **开关按钮只关不开**：click 监听器挂 `viewModelChange` 常量 false，重复点击只写同一个值。改 `scripted` Listener Action 取反（`p.value = not p.value`）；旧 listener 用 `delete_objects` 删；`queryStateMachine` 复核 `actions[].scriptAssetId`；单向复位保留常量写入（`BindablePropertyBoolean` 键 634）。
+48. **MCP 无建文本对象的命令**：中文标签走 fontTools 轮廓 → 定尺寸 SVG → `upload_asset` + `addSvgInstance`；外层 `Node` 只是壳，SVG 变换在子 `Group`（`810/811`=0、取不到顶点），落点用 `capture_artboard` 验收；别在缩放组里再套 translate（276px 事故）。
 
 ## 3. 脚本速用
 
@@ -160,11 +162,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 65 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 67 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/65 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/67 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序

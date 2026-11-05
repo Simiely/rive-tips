@@ -333,6 +333,24 @@ Deactivating ──(bool == true)──> Activating
 
 实测：12 个按钮打组后渲染差异 0 像素；`simulateStateMachine` 无线网络/全车锁激活命中 `Activating`，蓝牙/主驾加热关闭命中 `Deactivating`；手动置色后激活态与设计稿一致（橙卡+白字），关闭态与其它未激活按钮一致。
 
+## 九、MCP 实操补充：开关监听与中文标签（2026-11-05）
+
+### 1. 只关不开的根因：`viewModelChange` 是常量写入
+
+- 现象：点一次能关，再点不会开。
+- 原因：click 监听器挂的是 `viewModelChange` + 常量 `false`，每次点击都写 `false`，没有"取反"。
+- 解法：改用 **scripted** Listener Action（§5 的脚本），`actions: [{ "type": "scripted", "scriptAssetId": "<toggle 脚本>" }]`。
+- 旧监听器可以直接 `delete_objects` 删（`StateMachineListener` 是对象；实测传入 listener id 后状态机 `listeners` 回 `[]`），再重建 click 监听。
+- 复核：`animation_editor queryStateMachine` 的 `listeners[].actions[]` 会带 `type: "scripted"` 与 `scriptAssetId`；`script_diagnostics` 必须 `[]`。
+- "全部显示"这类单向复位仍用 `viewModelChange` 常量 true；常量值落在 `BindablePropertyBoolean` 的 **`propertyvalue` 键 634**（`query_property_values` 读到 `true` 才算写对）。
+
+### 2. 中文标签：MCP 没有建文本对象的命令，用 SVG 轮廓
+
+- 工具面里没有新建 Text / TextRun 的命令（`text_editor` 是脚本编辑）。标签要自己做轮廓：fontTools（`simhei.ttf`）→ 每字一组 `<path>` → 定宽定高 SVG → `upload_asset`（data URI）→ `assets_tool addSvgInstance`。
+- `queryAsset` 的 `width/height` 就是 SVG 的 viewBox 尺寸。按钮 88×44 时：两个字 **42×20**、四个字 **70×17**，左右各留约 9px。
+- `addSvgInstance` 建出来是 `Node → Group → Shape`；SVG 的 viewBox 变换（scale + translate）落在子 `Group` 上（实测 42×20 标签子组 `sx≈8.59%`、`x≈22`），`Node` 的 `computedwidth/height`(810/811) 读回 0，`query_property_values` 也取不到轮廓顶点。**落点只能用 `capture_artboard` 验收**，不能按资产尺寸硬算中心。
+- 不要在已缩放的组里再套一层 `translate`：会二次放大（实测标签宽度炸到 276px）。
+
 ## 来源
 
 - [Rive Listener Action Scripts](https://rive.app/docs/scripting/protocols/listener-action-scripts)
