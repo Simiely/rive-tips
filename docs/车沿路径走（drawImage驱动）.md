@@ -39,7 +39,7 @@ renderer:restore()
 | 来源 | 做法 |
 |---|---|
 | 参考 HTML 的 SVG 路径字符串 | Python 解析（M/C 逐段 flatten，12 段/条）→ 弧长均匀重采样（~3px/点）→ 角度**解卷绕** → 烘成 Lua 表 |
-| **Rive 画板里的路径对象**（用户手绘） | 读 `PointsPath` 的子对象（顶点）：`x(24) / y(25) / inrotation(84) / indistance(85) / outrotation(86) / outdistance(87)`；控制柄 = `顶点 + dist*(cos(rot), sin(rot))`，rot 为**弧度**；逐段 flatten 后同上 |
+| **Rive 画板里的路径对象**（用户手绘） | 读 `PointsPath` 的子对象（顶点）：`x(24) / y(25) / inrotation(84) / indistance(85) / outrotation(86) / outdistance(87)`；控制柄 = `顶点 + dist*(cos(rot), sin(rot))`，**MCP 返回的 rot 是度**（2026-11-05 实测；Lua 里先 `math.rad`）；逐段 flatten 后同上 |
 
 **坐标系三坑（本次最大教训）**：
 
