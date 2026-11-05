@@ -48,7 +48,15 @@ y = sy + math.sin(rear) * 45 + (math.random() - 0.5) * jitter
 
 `speedFactor = 0.1 + speed/250`（默认车速 350 → 1.5），直接决定稳态数量。
 
-## 四、绘制与透明度的官方约束
+## 四、参数控制（`Input<number>`，等价于参考 HTML 的滑杆）
+
+九个参数全部暴露为脚本输入，在检查器右侧直接调：`sandRate` / `sandLife` / `sandSize` / `sandPower` / `sandSpread` / `dustRate` / `dustLife` / `dustSpread` / `turb`（默认值与第三节一致）。
+
+- 可逐帧做关键帧动画，也可 `databind` 到 ViewModel，由宿主 App 运行时改值
+- **官方没有运行时滑杆组件**：画板里的"滑条"只能自绘轨道 + 把手，`create_listeners` 的 `click`/`drag` 只给事件、不给连续指针坐标；要做连续拖拽，值必须由 ViewModel/App 侧写入
+- 开关类（`sandOn`/`dustOn`）是 `Input<boolean>`，配合 `create_listeners` 的 `click` + `viewModelChange` 可做画板按钮（2026-11-05 已跑通）
+
+## 五、绘制与透明度的官方约束
 
 - `drawPath(path, paint)` 一次调用只有一个 `paint`，**整批共享透明度**；要逐粒渐隐只能：
   - 分年龄桶（本实现，桶数↑越平滑、调用数↑，5 桶即够用），或
