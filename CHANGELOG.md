@@ -9,6 +9,7 @@
 - 左右两个开关按钮原来挂 `viewModelChange` 常量 false，第二次点击仍写 false → 换成 `scripted` Listener Action（`prop.value = not prop.value`）；旧监听器用 `delete_objects` 删除后重建。`queryStateMachine` 复核：`sandToggle` / `dustToggle` → `scripted`，`scriptAssetId` 正确；`script_diagnostics` 均为 `[]`。
 - 「全部显示」保留 `viewModelChange` 常量 true（`BindablePropertyBoolean` 键 634 回读 `true`）。
 - 三个按钮下移到 y=240，补「沙粒 / 灰尘 / 全部显示」标签。
+- 按钮改为 **64×64 圆形**（矩形宽=高=直径，四角半径 32，监听目标 ID 不变）；文字移到圆形下方（节点 y=304，墨迹与圆底间隙约 17px）。用截图 + PIL 量白字/圆形 bbox 校正 x，最终三个标签中心与圆心误差 ≤1.7px。
 
 ### 新增
 

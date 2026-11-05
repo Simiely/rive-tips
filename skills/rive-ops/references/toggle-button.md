@@ -351,6 +351,13 @@ Deactivating ──(bool == true)──> Activating
 - `addSvgInstance` 建出来是 `Node → Group → Shape`；SVG 的 viewBox 变换（scale + translate）落在子 `Group` 上（实测 42×20 标签子组 `sx≈8.59%`、`x≈22`），`Node` 的 `computedwidth/height`(810/811) 读回 0，`query_property_values` 也取不到轮廓顶点。**落点只能用 `capture_artboard` 验收**，不能按资产尺寸硬算中心。
 - 不要在已缩放的组里再套一层 `translate`：会二次放大（实测标签宽度炸到 276px）。
 
+### 3. 圆形按钮 + 文字移到下方
+
+- 圆形不改元件：直接用原矩形路径，宽/高都设成直径（本例 **64×64**），四角半径 `31/161/162/163` 全设 **32**（`linkcornerradius` 保持 true）。监听器目标 ID 不变，不用重挂。
+- 文字节点下移：圆心 y=240、半径 32 → 圆底 272；文字节点 y 设 **304**，实测墨迹顶部与圆底的间隙约 17px，不重叠。
+- 水平要按墨迹校正：SVG 标签墨迹中心相对 Node 的 `x` 有固定偏移（实测 42×20 为 **+20.7 / +21.7**，70×17 为 **+26.7**），Node `x` 应填 `圆心x − 偏移`，不能直接用圆心。
+- 验收用像素：`capture_artboard` 落盘后，PIL 分别取圆形填充色 bbox 与白色文字 bbox，比较中心。本例最终三个标签与圆心误差 **≤1.7px**（1536 截图），肉眼看不准。
+
 ## 来源
 
 - [Rive Listener Action Scripts](https://rive.app/docs/scripting/protocols/listener-action-scripts)
