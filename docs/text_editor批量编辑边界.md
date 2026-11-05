@@ -10,7 +10,7 @@
 | `str_replace` 小锚点（<1KB） | ✅ |
 | `str_replace` 整文件（4783 字符 old） | ❌ "Could not find old_string"——**old_string 有长度上限** |
 | `new_string` 大小 | ✅ 1.9KB old → 4.7KB new 一次成功（new 可以很大） |
-| `view_range` | ⚠️ 参数名不对报 type cast 错（用法待查，用全文 view 代替） |
+| `view_range` | ✅ 有效，返回带行号的分段；**`end_line` 超过文件实际行数时返回空**（不会截断到 EOF）；单次分段建议 ≤300 行 |
 
 ## 二、大段更新的标准流程
 

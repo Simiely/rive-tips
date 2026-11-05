@@ -231,6 +231,34 @@ scripts/rive-mcp.ps1 -Tool export_file -ArgsJson '{"format":"rev","destination":
 - 字体子集化前提醒用户存快照；恢复全量字体 = 重新上传字体 + 重绑 `279`。
 - 所有删除/重绑操作都要先提醒存快照、后回读验证；不要凭 `success: true` 判断成功。
 
+## 十、脚本渲染基准（`rive . --bench`）
+
+判断"粒子/脚本效果到底花多少"不要靠倍数估算，用官方 CLI 的离线基准：
+
+```powershell
+rive <项目目录> . --bench=600      # 构建 publish 级脚本，跑 600 帧，报 advance/render 分位
+```
+
+输出形如 `bench advance: mean 0.411ms p50 … p95 …` 与 `bench render: mean 0.740ms …`，外加脚本堆增长。
+
+**实测矩阵**（i7-14700 + RTX 4070 SUPER，800×600 原生 headless，各 3 次取均；同一 1920 粒更新逻辑）：
+
+| 变体 | advance | render |
+|---|---|---|
+| 空画面（只有底色） | 0.023 ms | 0.242 ms |
+| 720 沙粒 · 20 条分桶 `drawPath` | 0.024 ms | 0.725 ms |
+| 720 沙粒 · 逐粒 720 次 `drawPath` | 0.024 ms | 0.786 ms |
+| 1200 个大圆（r=30，模拟灰尘填充） | 0.039 ms | 0.552 ms |
+| 完整（720+1200 粒 + 每粒 value noise） | 0.411 ms | 0.740 ms |
+
+结论：
+
+- 原生渲染器上**批绘与逐粒调用几乎等价**（差 0.06 ms），"draw 次数多就慢"在本机不成立；瓶颈是**逐粒噪声计算**（advance +0.39 ms）与**大面积 alpha 填充**（render +0.31 ms）。
+- 合计 ≈1.15 ms/帧 ≈ 60fps 预算的 7%，但这是桌面 GPU；车机按目标硬件复测。
+- Web 运行时不同：官方 `gpu-performance` 文档指出 WebGL2 每次 draw 约 2/3 成本在浏览器 GPU 进程，那种场景才必须批绘/实例化。
+
+复现：`rive create` 建一个最小工程，脚本里放变体开关（`none`/`batch`/`single`），同一工程复制出三份改常量即可；`--bench` 不需要登录。
+
 ## 来源
 
 - 官方文档：[Assets](https://rive.app/docs/editor/fundamentals/assets-overview)（Embedded / Referenced / Hosted）
