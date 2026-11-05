@@ -134,6 +134,8 @@
 > - ViewModel：`viewmodel_editor` → `createViewModels`/`addProperties`/`createViewModelInstances`/`bindViewModelToArtboard`/`databind`
 >
 > **风险**：本 Early Access 版本 2026-11-04 三次 VM 写入闪退（见 `AGENTS.md` 坑位 33）。先存快照再试；崩一次就转 UI 手动建，别再重试同一命令。
+>
+> **2026-11-05 成功样例**：空壳 VM → `addProperties`（boolean）→ `createViewModelInstances`（初值 true）→ `bindViewModelToArtboard` → `databind` 到 `ScriptInputBoolean`（属性键 **245**，不是 634）→ `createParametricShapes` 建 3 个圆角矩形 → `create_listeners` 的 `click` + `viewModelChange` → `reorder_objects sendToFront`，全链路成功未崩。要点：`createViewModels` 先不内联 properties；脚本输入绑定键为 `245`。
 
 ### 5. toggle 脚本
 
