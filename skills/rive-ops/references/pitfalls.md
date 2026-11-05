@@ -131,6 +131,11 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **点击切换没反应** | opacity 0 浮层不命中 / 监听器挂错 | 监听器挂 Shape；必要时加透明命中层；脚本类型必须 listenerAction |
 | **开关按钮只关不开** | 监听器 action 是 `viewModelChange` 常量 false，重复点击只是重复写 false | 改 `scripted` Listener Action（`p.value = not p.value`）；旧 listener 可 `delete_objects` 删；`queryStateMachine` 复核 `scriptAssetId`（[详见](toggle-button.md)） |
 | **MCP 做中文标签** | 工具集没有新建文本对象的命令；`addSvgInstance` 的 Node 不暴露文字包围盒 | fontTools 轮廓 → 定尺寸 SVG（88×44 按钮用 42×20 / 70×17）→ `upload_asset` + `addSvgInstance`；落点靠 `capture_artboard` 验收（[详见](toggle-button.md)） |
+| **路径光带整条不可见** | 填充多边形逆时针（y 向下）；0 error | 按顺时针绕序重排：-n 侧尾→头 → 头半圆 → +n 侧头→尾 → 尾半圆（[详见](aurora-path-fx.md)） |
+| **两个画板要用不同脚本/参数** | 共用同一个 `scriptAsset`，改常量会互相影响 | 新建脚本（`manage_scripts.create` 带 content）+ 用户在目标画板右键挂节点；MCP 没有 attach 接口（[详见](aurora-path-fx.md)） |
+| **右键新建脚本节点位置不对** | 默认落在画板中心 `(1280,720)`、最上层 | `set_property_values` 到路径父级坐标（如 `1639,682`），再 `reorder_objects` 调到地图之上、UI 之下（[详见](aurora-path-fx.md)） |
+| **脚本节点跨画板复用** | `duplicate_objects` 不能复制 ScriptAsset（报 not a Component）；改 848 不重绑 | 同脚本可复制节点（不改 848）；要新脚本只能右键挂节点（[详见](aurora-path-fx.md)） |
+| **ScriptInputs 想中文化/调顺序** | 标签就是 ASCII 字段名；改输入对象 name 重编译后会被重建 | 中文只能写源码注释；顺序用 `reorder_objects` 对输入子对象 `sendToFront`；数值键 **243**、布尔 **245**（[详见](aurora-path-fx.md)） |
 | **面板 Not Found 不一定缺数据** | 后端缩略图/资产记录状态 | 用 `.rev` 拆解验证数据；渲染/导出正常就保留 |
 | **浅色主题按钮激活后不变色** | 扁平矢量没有文字对象，颜色分散在卡片和每个图标/轮廓填充上 | 按填充逐个做颜色关键帧：卡片 `#141a1a1a↔#ffd96b2b`、图标/文字 `#a61a1a1a↔#ffffffff`（[详见](toggle-button.md)） |
 | **打组后缩放跑偏** | `group_editor` 的组原点落在 `objectIds` 第一个对象上 | 把**卡片放第一个**，组原点正好是按钮中心 |

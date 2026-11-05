@@ -25,6 +25,7 @@
         性能诊断与资产瘦身.md     -> performance.md
         按钮开关与按压动效.md     -> toggle-button.md
         效果-沙尘尾流.md         -> sand-dust-trail.md
+        效果-路径电流与脚本复用.md -> aurora-path-fx.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     And scripts/* -> skills/rive-ops/scripts/* (same basename, top level only).
@@ -80,6 +81,7 @@ $map = [ordered]@{
     '性能诊断与资产瘦身.md'   = 'performance.md'
     '按钮开关与按压动效.md'   = 'toggle-button.md'
     '效果-沙尘尾流.md'       = 'sand-dust-trail.md'
+    '效果-路径电流与脚本复用.md' = 'aurora-path-fx.md'
 }
 
 function Convert-DocLinks {

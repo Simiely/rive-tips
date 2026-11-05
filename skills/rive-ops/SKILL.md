@@ -34,6 +34,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 交互做了但代码驱动不了 | 查 `inputs` / `dataBinds`（铁律 14）→ 补 ViewModel 触发并 `bindViewModelToArtboard` | `references/binding.md` |
 | 打开慢 / 素材字体转圈 / 资产瘦身 | `listAssets` → 图片 `206` / 字体 `279` 审计 → `delete_objects` 删未使用 → fontTools 子集化 | `references/performance.md` |
 | 按钮按压 / 开关 / 激活态 | 浮层 + 橙点 → 30 帧动画 → ViewModel bool → Listener Action Script toggle → 一按钮一层状态机 | `references/toggle-button.md` |
+| 沿路径电流 / 光带追尾 / 长度自适应 | 离线展平路径 → 沿法向铺窄条 → 顺时针绕序 + 圆头圆尾 → 加宽羽化叠加做辉光；`tail = car.dist - gap`，长度按进度 `clamp` | `references/aurora-path-fx.md` |
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
@@ -87,6 +88,10 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 46. **`drawPath` 批绘共享透明度**：逐粒渐隐只能分年龄桶（有损）或用 `drawImageMeshInstanced` 的 per-instance opacity（精确）；官方无 compute、无 noise API，湍流需自写。
 47. **开关按钮只关不开**：click 监听器挂 `viewModelChange` 常量 false，重复点击只写同一个值。改 `scripted` Listener Action 取反（`p.value = not p.value`）；旧 listener 用 `delete_objects` 删；`queryStateMachine` 复核 `actions[].scriptAssetId`；单向复位保留常量写入（`BindablePropertyBoolean` 键 634）。
 48. **MCP 无建文本对象的命令**：中文标签走 fontTools 轮廓 → 定尺寸 SVG → `upload_asset` + `addSvgInstance`；外层 `Node` 只是壳，SVG 变换在子 `Group`（`810/811`=0、取不到顶点），落点用 `capture_artboard` 验收；别在缩放组里再套 translate（276px 事故）。
+49. **路径光带整条不可见但 0 error** → 填充多边形绕序反了（画布 y 向下，可见需顺时针）：`-n` 侧尾→头 → 头半圆 → `+n` 侧头→尾 → 尾半圆；先截图再怀疑透明度。
+50. **两个画板要不同脚本/参数** → 共用同一 `scriptAsset` 时改常量互相污染。新脚本走 `manage_scripts.create`（可带 content，借 `scripts/rive_mcp.py` 读本地文件，别把 28 KB 塞进对话）；**MCP 没有 attach 接口**，脚本节点必须用户在目标画板右键添加，`duplicate_objects` 复制不了 ScriptAsset（报 not a Component），也别改属性 `848`。
+51. **右键新建脚本节点落点错** → 默认画板中心 `(1280,720)` 且最上层：`set_property_values` 到父级坐标（如 `1639,682`）→ `reorder_objects` 压到地图之上、UI 之下。
+52. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文），改名会在重编译时重建对象（实测 `291-*`→`297-*`）并丢顺序；中文只写源码注释，顺序用 `reorder_objects` 对输入子对象 `sendToFront`，数值键 **243**、布尔 **245**。
 
 ## 3. 脚本速用
 
@@ -162,11 +167,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 67 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 72 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/67 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/72 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
@@ -178,9 +183,10 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/binding.md` —— 数据绑定与状态机驱动：两套模型、三个绑定坑、无头验证
 - `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
+- `references/aurora-path-fx.md` —— 沿路径电流/光带：参数解码、追尾与长度自适应、圆头圆尾、辉光分层、双画板双脚本
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；12 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；14 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
 - 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。

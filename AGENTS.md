@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-05 v1.6.2 —— 修正路径顶点角度单位为「度」：README 12 主题、坑位表 67 行（不含表头）、结论先行 47 条、references 13 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-05 v1.7.0 —— 新增「路径电流与脚本节点跨画板复用」：README 12 主题、坑位表 72 行（不含表头）、结论先行 52 条、references 14 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -62,6 +62,11 @@
 45. **无 `clip` / `transform` 的位图直接取原生像素**（`scale` 100%），既省一次隔离渲染、又不丢分辨率；只有带 `clip` + `rotate()` 的才需要"隔离渲染 + alpha bbox"。
 46. **开关按钮只关不开** → click 监听器挂的是 `viewModelChange` 常量（false），每次点击只会重复写同一个值。改用 `scripted` Listener Action 取反（`p.value = not p.value`）；旧 listener 可用 `delete_objects` 直接删；`animation_editor queryStateMachine` 回读 `actions[].scriptAssetId`，`script_diagnostics` 必须 `[]`。"全部显示"这类单向复位继续用 `viewModelChange`，常量值在 `BindablePropertyBoolean` 键 **634**。
 47. **MCP 没有建文本对象的命令** → 中文标签用 fontTools 轮廓 + 定尺寸 SVG + `addSvgInstance`。资产尺寸 = viewBox（88×44 按钮配 42×20 / 70×17）；SVG 变换落在子 `Group`（实测 42×20 标签 `sx≈8.59%`、`x≈22`），外层 `Node` 的 `810/811` 读回 0、轮廓顶点也取不到 → 落点只能用 `capture_artboard` 验收；不要在已缩放组里再套 `translate`（宽度会炸到 276px）。
+48. **路径光带整条不可见** → 填充多边形是逆时针（y 向下），0 error。顺时针绕序：`-n` 侧尾→头 → 头半圆 → `+n` 侧头→尾 → 尾半圆。
+49. **两个画板要用不同脚本/参数** → 共用同一个 `scriptAsset` 时改常量会互相影响。新建脚本用 `manage_scripts.create`（可带 content，借 `scripts/rive_mcp.py` 从本地文件读，避免把 28KB 塞进对话）；**MCP 没有 attach 接口，必须用户在目标画板右键添加脚本节点**。
+50. **右键新建脚本节点** → 默认落在画板中心 `(1280,720)`、最上层。要 `set_property_values` 到路径父级坐标（如 `1639,682`），再 `reorder_objects` 调到地图之上、UI 之下；`duplicate_objects` 不能复制 ScriptAsset（报 not a Component），同脚本可复制节点且不要改 848。
+51. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文）；不要重命名 ScriptInput 对象，重编译会重建（实测 id `291-*`→`297-*`）。中文写源码注释；顺序用 `reorder_objects` 对输入子对象 `sendToFront`；数值键 **243**、布尔 **245**。
+52. **电流长度随车位置自适应** → `lenScale = clamp((dist/TOTAL)/0.5, 0, 1)`，`pulseLen = fxPulse*lenScale`；宽度渐变分母必须用实际 `head-tail`。50% 后保持 100%，`fxPulse` 仍是基础参数。
 
 ## FAQ 路由
 
@@ -74,6 +79,7 @@
 - "交互做了但代码触发不了" → [docs/数据绑定与状态机驱动.md](docs/数据绑定与状态机驱动.md)
 - "打开文件很慢 / 素材和字体一直转圈" → [docs/性能诊断与资产瘦身.md](docs/性能诊断与资产瘦身.md)
 - "要做按钮按压 / 开关 / 激活态动效" → [docs/按钮开关与按压动效.md](docs/按钮开关与按压动效.md)
+- "路径上一条电流追着车尾跑 / 光带宽度渐变和辉光 / 两个画板想用不同参数" → [docs/效果-路径电流与脚本复用.md](docs/效果-路径电流与脚本复用.md)
 - "设计稿（.ai / SVG）怎么导进来 / 位图丢了 / 位图是空的 / 图标圆角没了 / 图层名变方块 / 导入卡住不动 / 截图报 no drawable area" → [docs/AI素材导入链路.md](docs/AI素材导入链路.md)
 - 端点、命令、坑位一览 → [docs/速查表.md](docs/速查表.md)
 
