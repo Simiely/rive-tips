@@ -358,6 +358,21 @@ Deactivating ──(bool == true)──> Activating
 - 水平要按墨迹校正：SVG 标签墨迹中心相对 Node 的 `x` 有固定偏移（实测 42×20 为 **+20.7 / +21.7**，70×17 为 **+26.7**），Node `x` 应填 `圆心x − 偏移`，不能直接用圆心。
 - 验收用像素：`capture_artboard` 落盘后，PIL 分别取圆形填充色 bbox 与白色文字 bbox，比较中心。本例最终三个标签与圆心误差 **≤1.7px**（1536 截图），肉眼看不准。
 
+## 十、「全部开关」主开关（2026-11-06）
+
+三个 64×64 圆按钮一组：两个单开关 + 一个总开关；003 充电中 / 003 充电中 · 脚本原型各一套，复用同一个 `listenerAction` 脚本。
+
+| 部件 | 003 充电中 | 脚本原型 |
+|---|---|---|
+| 沙粒按钮 / 标签 | `BTN_sand_off 2` / `TXT_sand 2` | `BTN_sand_off` / `TXT_sand` |
+| 灰尘按钮 / 标签 | `BTN_dust_off 2` / `TXT_dust 2` | `BTN_dust_off` / `TXT_dust` |
+| 总开关 / 标签 | `BTN_all_on 2` / `TXT_all_switch` | `BTN_all_on` / `TXT_all_switch 2` |
+
+- 总开关语义：`next = not (sandOn and dustOn)` —— **两个都开着才全关，否则全部打开**（包括只开了一个的情况）。脚本为 `listenerAction`，`context:viewModel()` 取 `sandOn` / `dustOn` 两个 boolean，一起写同一个 `next`。
+- 监听器改造：MCP **没有**修改已有 listener/action 的命令。实测可行路径：`delete_objects` 传 listener id（返回 `deleted`）→ `create_listeners` 用同名、同 target 重建，action 写 `{"type":"scripted","scriptAssetId":"<脚本 id>"}` → `animation_editor queryStateMachine` 回读 `actions[].scriptAssetId`。
+- ViewModel 绑定回读：画板属性键 **`583` / `584`** 是 `viewmodelid` / `viewmodelinstanceid`。本例两个画板都绑到 `CarFx`，各用独立实例，所以两画板的开关互不影响。
+- 防重复副本：`find_objects` 匹配的是**节点名**，不是画面上的中文文字。本文件节点名是英文前缀，搜「沙 / 尘 / 全部」会返回空；应搜 `BTN_` / `TXT_` 并核对每画板各 3 条，出现 `... 2 2` 之类的后缀就是重复副本。
+
 ## 来源
 
 - [Rive Listener Action Scripts](https://rive.app/docs/scripting/protocols/listener-action-scripts)

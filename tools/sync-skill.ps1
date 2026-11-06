@@ -26,6 +26,25 @@
         按钮开关与按压动效.md     -> toggle-button.md
         效果-沙尘尾流.md         -> sand-dust-trail.md
         效果-路径电流与脚本复用.md -> aurora-path-fx.md
+        桌面端编译卡死排查.md     -> desktop-compile.md
+        capture与陈旧渲染.md      -> capture-stale.md
+        Context取素材与drawImage.md -> context-drawimage.md
+        PathEffect描边流动.md     -> patheffect-flow.md
+        text_editor批量编辑边界.md -> text-editor-limits.md
+        关键帧动画MCP实操.md      -> keyframes-mcp.md
+        关键帧循环防倒飞.md       -> keyframe-loop.md
+        多图层叠辉光.md           -> layered-glow.md
+        效果-粒子汇聚.md          -> particle-gather.md
+        效果-能量光圈.md          -> energy-ring.md
+        效果-脉冲辉光与呼吸灯.md  -> pulse-glow.md
+        效果索引.md               -> effects-index.md
+        画板素材的代码驱动缩放呼吸.md -> artboard-breathe.md
+        程序化动画Luau脚本.md     -> luau-procedural.md
+        编辑器2026界面变更对照.md -> editor-2026-ui.md
+        脚本节点安装边界.md       -> script-node-install.md
+        脚本颜色与透明度量纲.md   -> script-color-units.md
+        路径几何与坐标系映射.md   -> path-geometry.md
+        车沿路径走（drawImage驱动）.md -> car-follow-path.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     And scripts/* -> skills/rive-ops/scripts/* (same basename, top level only).
@@ -82,6 +101,25 @@ $map = [ordered]@{
     '按钮开关与按压动效.md'   = 'toggle-button.md'
     '效果-沙尘尾流.md'       = 'sand-dust-trail.md'
     '效果-路径电流与脚本复用.md' = 'aurora-path-fx.md'
+    '桌面端编译卡死排查.md'     = 'desktop-compile.md'
+    'capture与陈旧渲染.md'      = 'capture-stale.md'
+    'Context取素材与drawImage.md' = 'context-drawimage.md'
+    'PathEffect描边流动.md'     = 'patheffect-flow.md'
+    'text_editor批量编辑边界.md' = 'text-editor-limits.md'
+    '关键帧动画MCP实操.md'      = 'keyframes-mcp.md'
+    '关键帧循环防倒飞.md'       = 'keyframe-loop.md'
+    '多图层叠辉光.md'           = 'layered-glow.md'
+    '效果-粒子汇聚.md'          = 'particle-gather.md'
+    '效果-能量光圈.md'          = 'energy-ring.md'
+    '效果-脉冲辉光与呼吸灯.md'  = 'pulse-glow.md'
+    '效果索引.md'               = 'effects-index.md'
+    '画板素材的代码驱动缩放呼吸.md' = 'artboard-breathe.md'
+    '程序化动画Luau脚本.md'     = 'luau-procedural.md'
+    '编辑器2026界面变更对照.md' = 'editor-2026-ui.md'
+    '脚本节点安装边界.md'       = 'script-node-install.md'
+    '脚本颜色与透明度量纲.md'   = 'script-color-units.md'
+    '路径几何与坐标系映射.md'   = 'path-geometry.md'
+    '车沿路径走（drawImage驱动）.md' = 'car-follow-path.md'
 }
 
 function Convert-DocLinks {

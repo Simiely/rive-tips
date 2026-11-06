@@ -1,6 +1,6 @@
 ---
 name: rive-ops
-description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, merging a whole file into another without clearing it, exporting .riv deliverables, auditing artboards, diagnosing slow file loads / asset bloat / font loading, or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
+description: This skill should be used when working with Rive — desktop MCP integration, editing artboards, importing Illustrator (.ai) assets, transferring artboards between files, merging a whole file into another without clearing it, exporting .riv deliverables, auditing artboards, diagnosing slow file loads / asset bloat / font loading, diagnosing a desktop editor stuck on "Compiling", or diagnosing Rive text/font/z-order/rendering issues. Packages field-verified PowerShell helpers, a runtime acceptance page, and pitfall references collected from production work (Chinese).
 agent_created: true
 ---
 
@@ -33,6 +33,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 选运行时 / 上车机 | `webgl2` 优先，同屏多实例加 `useOffscreenRenderer`；Qt / Android / WebView 三条路线 | `references/runtime.md` |
 | 交互做了但代码驱动不了 | 查 `inputs` / `dataBinds`（铁律 14）→ 补 ViewModel 触发并 `bindViewModelToArtboard` | `references/binding.md` |
 | 打开慢 / 素材字体转圈 / 资产瘦身 | `listAssets` → 图片 `206` / 字体 `279` 审计 → `delete_objects` 删未使用 → fontTools 子集化 | `references/performance.md` |
+| 桌面端一直 `Compiling` / 浏览器正常 | 先三层对照（同文件 / 别的文件 / 空白文件）→ 量进程 CPU 增量 + IO：CPU 涨 + IO≈0 = 本地在算 → 别找日志，客户端不写 | `references/desktop-compile.md` |
 | 按钮按压 / 开关 / 激活态 | 浮层 + 橙点 → 30 帧动画 → ViewModel bool → Listener Action Script toggle → 一按钮一层状态机 | `references/toggle-button.md` |
 | 沿路径电流 / 光带追尾 / 长度自适应 | 离线展平路径 → 沿法向铺窄条 → 顺时针绕序 + 圆头圆尾 → 加宽羽化叠加做辉光；`tail = car.dist - gap`，长度按进度 `clamp` | `references/aurora-path-fx.md` |
 
@@ -92,6 +93,10 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 50. **两个画板要不同脚本/参数** → 共用同一 `scriptAsset` 时改常量互相污染。新脚本走 `manage_scripts.create`（可带 content，借 `scripts/rive_mcp.py` 读本地文件，别把 28 KB 塞进对话）；**MCP 没有 attach 接口**，脚本节点必须用户在目标画板右键添加，`duplicate_objects` 复制不了 ScriptAsset（报 not a Component），也别改属性 `848`。
 51. **右键新建脚本节点落点错** → 默认画板中心 `(1280,720)` 且最上层：`set_property_values` 到父级坐标（如 `1639,682`）→ `reorder_objects` 压到地图之上、UI 之下。
 52. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文），改名会在重编译时重建对象（实测 `291-*`→`297-*`）并丢顺序；中文只写源码注释，顺序用 `reorder_objects` 对输入子对象 `sendToFront`，数值键 **243**、布尔 **245**。
+53. **桌面端卡 `Compiling` 先分层**：浏览器同一文件正常、桌面打开别的文件也卡 → 客户端层，不要审计文件。桌面端**不写运行日志**（`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节）；量进程：CPU 持续增长 + IO≈0 = 本地在算，不是网络。
+54. **删 `editorProperties` / 改 `fileSafeMode` 不算"重载编辑器数据"**：`editorProperties` 打开文件即从文档重建；`fileSafeMode=true` 被客户端写回 `false`。本轮最终靠「卸载 + 删包数据 + 装最新版」恢复，但版本与安装方式两变量同时改变，不能归因单项。
+55. **改已有 listener 的 action 没有 update 命令**：`delete_objects` 传 listener id（可删）→ `create_listeners` 同名同 target 重建 `scripted` action → `queryStateMachine` 回读 `actions[].scriptAssetId`。
+56. **`find_objects` 按节点名搜**，中文是画面文字不是节点名；用 `BTN_` / `TXT_` 核对每画板各 3 条防重复副本。「全部开关」主开关 `next = not (sandOn and dustOn)`：两个都开才全关，否则全开。
 
 ## 3. 脚本速用
 
@@ -167,11 +172,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 72 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 78 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/72 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/78 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
@@ -182,11 +187,30 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/runtime.md` —— 运行时选型与车机落地：四个 Web 包、三条路线、上机前五项确认
 - `references/binding.md` —— 数据绑定与状态机驱动：两套模型、三个绑定坑、无头验证
 - `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
+- `references/desktop-compile.md` —— 桌面端卡 `Compiling`：分层对照、无运行日志、CPU/IO 判据、无效操作与归因边界
+- `references/capture-stale.md` —— capture 与陈旧渲染：focus 前置、403/黑屏、旧图判据
+- `references/context-drawimage.md` —— Context 取素材与 drawImage
+- `references/patheffect-flow.md` —— PathEffect 描边流动
+- `references/text-editor-limits.md` —— text_editor 批量编辑边界
+- `references/keyframes-mcp.md` —— 关键帧动画 MCP 实操
+- `references/keyframe-loop.md` —— 关键帧循环防倒飞
+- `references/layered-glow.md` —— 多图层叠辉光
+- `references/particle-gather.md` —— 粒子汇聚
+- `references/energy-ring.md` —— 能量光圈
+- `references/pulse-glow.md` —— 脉冲辉光与呼吸灯
+- `references/effects-index.md` —— 效果索引
+- `references/artboard-breathe.md` —— 画板素材的代码驱动缩放呼吸
+- `references/luau-procedural.md` —— 程序化动画 Luau 脚本
+- `references/editor-2026-ui.md` —— 编辑器 2026 界面变更对照
+- `references/script-node-install.md` —— 脚本节点安装边界
+- `references/script-color-units.md` —— 脚本颜色与透明度量纲
+- `references/path-geometry.md` —— 路径几何与坐标系映射
+- `references/car-follow-path.md` —— 车沿路径走（drawImage 驱动）
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
 - `references/aurora-path-fx.md` —— 沿路径电流/光带：参数解码、追尾与长度自适应、圆头圆尾、辉光分层、双画板双脚本
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；14 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；33 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
 - 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。

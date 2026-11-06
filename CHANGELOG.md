@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v1.8.0 — 2026-11-06
+
+新增「桌面端编译卡死排查」，并把「全部开关」主开关与 listener 改造边界写进按钮文档。本轮把"查日志"这条无效路径明确关掉：Rive 桌面端不写运行日志，只能量进程。
+
+### 新增
+
+- `docs/桌面端编译卡死排查.md`：三层对照（同文件 / 别的文件 / 空白文件）、`LocalCache` 实际内容、Sentry `breadcrumbs` 0 字节、CPU 增量 + IO 速率判据（CPU 涨 + IO≈0 = 本地在算）、网络/证书排除、5 项无效操作实测、最终恢复与**归因边界**（版本与安装方式两变量同时改变）。
+- `docs/按钮开关与按压动效.md` 新增 **§十「全部开关」主开关**：三按钮布局、`next = not (sandOn and dustOn)` 语义、`delete_objects` 删 listener → `create_listeners` 重建 `scripted` action、画板 `583`/`584` 绑定回读、`BTN_`/`TXT_` 防重复副本。
+
+### 更新
+
+- `docs/速查表.md`：坑位表 72 → **78 行**（桌面端 Compiling 分层 / 无运行日志 / editorProperties 与 fileSafeMode 无效 / 改 listener 无 update / 搜中文名搜不到节点 / 全部开关语义）。
+- `AGENTS.md`：文档基线升到 v1.8.0，结论先行 52 → **56 条**，FAQ 路由补桌面端编译卡死行，references 14 → **33 篇**。
+- `skills/rive-ops/SKILL.md`：铁律 52 → **56 条**，任务路由与参考清单各补一条，`完整 72 行` 改为 78。
+- `README.md`：主题 12 → **13**，技能参考 12 → **33 篇**，快速开始补一条。
+- `tools/sync-skill.ps1`：映射新增 `docs/桌面端编译卡死排查.md -> references/desktop-compile.md`；并把 18 个历史未映射文档一并补进映射（references 15 → **33**），`-Check` 全绿。
+
+### 实测数据
+
+- 卡住时：CPU 5 秒内涨 2.64s（≈53% 单核，另有线程 46% / 15%），IO **0 KB/s**，GPU 3D 引擎 **2.1%**；进程 600–750 MB。
+- 浏览器同文件 **0.6s**；桌面端打开其他文件同样卡。
+- 网络：TCP 443 98–211ms、HTTPS 首页 0.67–0.72s；代理日志显示 `*.rive.app` 全 DIRECT。
+- 清 `editorProperties`：`shared_preferences.json` 4 864 → 463 → 4 868 字节（打开即重建）。
+- 恢复：卸载 + 删包数据 + 安装最新测试版；版本与安装方式同时改变，**未做单项归因**。
+
+### 未验证（不收录进正文，仅在此备注）
+
+- 双显卡 / 虚拟显示适配器线索（Intel UHD 770 + RTX 4070 SUPER + OrayIdd / RayLink / Zako）：未做强制高性能 GPU、禁用虚拟显示器的 A/B，不能算已证实原因。
+- 测试版与正式版差异：未单独验证。
+
 ## v1.7.0 — 2026-11-05
 
 新增「路径电流（追尾流光）」：一条辉光电流从路径右下的充电图标出发，追着车尾跑，长度随车位置自适应；并把「同文件两个画板各用一套脚本/参数」的 MCP 边界一次写清。
