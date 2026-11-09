@@ -26,6 +26,7 @@
         按钮开关与按压动效.md     -> toggle-button.md
         效果-沙尘尾流.md         -> sand-dust-trail.md
         效果-路径电流与脚本复用.md -> aurora-path-fx.md
+        效果-电流缓动与羽化蒙版.md -> effect-feather-easing.md
         桌面端编译卡死排查.md     -> desktop-compile.md
         capture与陈旧渲染.md      -> capture-stale.md
         Context取素材与drawImage.md -> context-drawimage.md
@@ -101,6 +102,7 @@ $map = [ordered]@{
     '按钮开关与按压动效.md'   = 'toggle-button.md'
     '效果-沙尘尾流.md'       = 'sand-dust-trail.md'
     '效果-路径电流与脚本复用.md' = 'aurora-path-fx.md'
+    '效果-电流缓动与羽化蒙版.md' = 'effect-feather-easing.md'
     '桌面端编译卡死排查.md'     = 'desktop-compile.md'
     'capture与陈旧渲染.md'      = 'capture-stale.md'
     'Context取素材与drawImage.md' = 'context-drawimage.md'

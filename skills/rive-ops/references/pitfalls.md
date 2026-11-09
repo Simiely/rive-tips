@@ -183,6 +183,10 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **要改已有 listener 的 action** | MCP 没有 update listener/action 的命令 | `delete_objects` 删 listener → `create_listeners` 重建（`scripted` + `scriptAssetId`）→ `queryStateMachine` 回读（[详见](toggle-button.md)） |
 | **搜中文按钮名搜不到节点** | `find_objects` 匹配节点名；中文是画面文字，不是节点名 | 按英文前缀 `BTN_` / `TXT_` 搜，并核对每画板 3 条防副本（[详见](toggle-button.md)） |
 | **「全部开关」点一下开、再点关** | 两个独立开关的组合态没有天然"当前值" | `next = not (sandOn and dustOn)`：两个都开才全关，否则全开（[详见](toggle-button.md)） |
+| **电流起步不够快 / 末段像"停住"** | 只调 `fxSpeed` 改的是总时长；纯缓出曲线末段斜率趋 0 | 存进度 `prog`，`head = (0.25*p + 0.75*bezier(0.25,0.10,0.25,1.00)) * target`；25% 线性保底（[详见](effect-feather-easing.md)） |
+| **蒙版边缘是硬切 / 想要羽化** | Rive 的 `clipPath` 只有硬边，没有 feather | 同一形状叠 8 层，`extra` 由 290 递减到 0、每层 alpha 7.5%，srcOver 叠出渐变（[详见](effect-feather-easing.md)） |
+| **蒙版里的下层图整体偏移** | 脚本局部坐标 ≠ 画板坐标 | `clipPath` 后 `transform(Mat2D.withTranslation(-1639,-682))` 再 `drawImage`（[详见](effect-feather-easing.md)） |
+| **羽化层数一加就卡** | 成本 ≈ 蒙版面积 × 层数 × 同屏电流条数，不是层数单项 | 先压 `REVEAL_EXTRA`（660 → 290）并保证同时只有一条电流，再加层（[详见](effect-feather-easing.md)） |
 
 ## 八、画板指纹（核验口径）
 

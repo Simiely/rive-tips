@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-06 v1.8.0 —— 新增「桌面端编译卡死排查」与「全部开关主开关」：README 13 主题、坑位表 78 行（不含表头）、结论先行 56 条、references 33 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-09 v1.9.0 —— 新增「电流缓动与羽化蒙版」：README 13 主题、坑位表 82 行（不含表头）、结论先行 58 条、references 34 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -66,11 +66,13 @@
 49. **两个画板要用不同脚本/参数** → 共用同一个 `scriptAsset` 时改常量会互相影响。新建脚本用 `manage_scripts.create`（可带 content，借 `scripts/rive_mcp.py` 从本地文件读，避免把 28KB 塞进对话）；**MCP 没有 attach 接口，必须用户在目标画板右键添加脚本节点**。
 50. **右键新建脚本节点** → 默认落在画板中心 `(1280,720)`、最上层。要 `set_property_values` 到路径父级坐标（如 `1639,682`），再 `reorder_objects` 调到地图之上、UI 之下；`duplicate_objects` 不能复制 ScriptAsset（报 not a Component），同脚本可复制节点且不要改 848。
 51. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文）；不要重命名 ScriptInput 对象，重编译会重建（实测 id `291-*`→`297-*`）。中文写源码注释；顺序用 `reorder_objects` 对输入子对象 `sendToFront`；数值键 **243**、布尔 **245**。
-52. **电流长度随车位置自适应** → `lenScale = clamp((dist/TOTAL)/0.5, 0, 1)`，`pulseLen = fxPulse*lenScale`；宽度渐变分母必须用实际 `head-tail`。50% 后保持 100%，`fxPulse` 仍是基础参数。
+52. **电流长度随车位置自适应** → `lenScale = clamp((dist/TOTAL)/0.5, 0, 1)`，`pulseLen = fxPulse*lenScale`；宽度渐变分母必须用实际 `head-tail`。50% 后保持 100%，`fxPulse` 仍是基础参数。（2026-11-09 定稿改为常值长度 + 缓动，见 57；本条保留为「长度随进度变化」的可选方案）
 53. **桌面端卡 `Compiling` 先分层，不要先查文件**：浏览器同文件正常、桌面端打开**别的文件也卡** → 客户端层。桌面端**不写运行日志**（`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节）；改量进程：CPU 持续增长 + IO≈0 = 本地在算，不是网络。
 54. **想"重载编辑器数据"删 `editorProperties` / 改 `fileSafeMode` 都无效**：`editorProperties` 打开文件即从文档重建（4 864 → 463 → 4 868 字节）；`fileSafeMode=true` 被客户端写回 `false`。本轮最终靠「卸载 + 删包数据 + 装最新版」恢复，但版本与安装方式两变量同时改变，**不能归因单项**。
 55. **改已有 listener 的 action 没有 update 命令**：`delete_objects` 传 listener id（可删）→ `create_listeners` 用同名、同 target 重建 `scripted` action → `queryStateMachine` 回读 `actions[].scriptAssetId`。
 56. **`find_objects` 按节点名搜，中文是画面文字不是节点名**：本文件节点名是英文前缀，搜「沙 / 尘 / 全部」返回空；用 `BTN_` / `TXT_` 核对每画板各 3 条防重复副本。「全部开关」主开关语义 `next = not (sandOn and dustOn)`：两个都开才全关，否则全开。
+57. **电流"起步快、到车尾慢"不要改 `fxSpeed`**：那是总时长。存进度 `prog 0→1`，用 `0.25*p + 0.75*bezier(0.25,0.10,0.25,1.00)` 映射头部弧长；纯缓出末段斜率趋 0，会看起来"停住"，必须留 25% 线性保底。
+58. **Rive 没有羽化 clip**：`clipPath` 只有硬边。羽化 = 同一电流多边形做 N 层、`extra` 从 290 递减到 0、每层 alpha 7.5% 叠画下层图；成本 ≈ 蒙版面积 × 层数 × 电流条数，先压面积与条数再加层（660 + 双电流时 5 层就卡，290 + 单条时 8 层不卡）。
 
 ## FAQ 路由
 
@@ -85,6 +87,7 @@
 - "桌面端一直 Compiling / 浏览器正常 / 清缓存无效 / 想读编译日志" → [docs/桌面端编译卡死排查.md](docs/桌面端编译卡死排查.md)
 - "要做按钮按压 / 开关 / 激活态动效" → [docs/按钮开关与按压动效.md](docs/按钮开关与按压动效.md)
 - "路径上一条电流追着车尾跑 / 光带宽度渐变和辉光 / 两个画板想用不同参数" → [docs/效果-路径电流与脚本复用.md](docs/效果-路径电流与脚本复用.md)
+- "电流起步要快、到车尾要慢 / 光晕边缘要羽化 / 加层就卡" → [docs/效果-电流缓动与羽化蒙版.md](docs/效果-电流缓动与羽化蒙版.md)
 - "设计稿（.ai / SVG）怎么导进来 / 位图丢了 / 位图是空的 / 图标圆角没了 / 图层名变方块 / 导入卡住不动 / 截图报 no drawable area" → [docs/AI素材导入链路.md](docs/AI素材导入链路.md)
 - 端点、命令、坑位一览 → [docs/速查表.md](docs/速查表.md)
 
