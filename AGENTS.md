@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-10 v1.10.0（待回填）—— 更正「改 listener 只能删了重建」，补 `930` 键与「跨文件粘贴只丢脚本」：README 13 主题、坑位表 84 行（不含表头）、结论先行 61 条、references 34 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-10 v1.10.0（`10e538e`）—— 更正「改 listener 只能删了重建」，补 `930` 键与「跨文件粘贴只丢脚本」：README 13 主题、坑位表 84 行（不含表头）、结论先行 61 条、references 34 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
