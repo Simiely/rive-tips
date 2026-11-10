@@ -1,6 +1,6 @@
 # AGENTS.md — 给 AI / 未来的你：关键坑速记
 
-> 📌 **文档基线**：2026-11-09 v1.9.0（`fd3a350`）—— 新增「电流缓动与羽化蒙版」：README 13 主题、坑位表 82 行（不含表头）、结论先行 58 条、references 34 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
+> 📌 **文档基线**：2026-11-10 v1.10.0（待回填）—— 更正「改 listener 只能删了重建」，补 `930` 键与「跨文件粘贴只丢脚本」：README 13 主题、坑位表 84 行（不含表头）、结论先行 61 条、references 34 篇与 docs 一一对应；改 docs 后先 `tools/sync-skill.ps1 -Check` 再 `-Install`（见「约定」）
 > **更新文档/代码后，请更新此行**（日期 + 新 commit hash），并在 CHANGELOG 追加版本
 
 本仓库整理 **Rive 使用技巧**（MCP 联调 / CLI 与 RML / 搬运 / 体检 / 运行时）。**只收录实际验证过的做法**，未验证的明确标注"暂不收录"。回答相关问题前先读这份。
@@ -69,10 +69,13 @@
 52. **电流长度随车位置自适应** → `lenScale = clamp((dist/TOTAL)/0.5, 0, 1)`，`pulseLen = fxPulse*lenScale`；宽度渐变分母必须用实际 `head-tail`。50% 后保持 100%，`fxPulse` 仍是基础参数。（2026-11-09 定稿改为常值长度 + 缓动，见 57；本条保留为「长度随进度变化」的可选方案）
 53. **桌面端卡 `Compiling` 先分层，不要先查文件**：浏览器同文件正常、桌面端打开**别的文件也卡** → 客户端层。桌面端**不写运行日志**（`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节）；改量进程：CPU 持续增长 + IO≈0 = 本地在算，不是网络。
 54. **想"重载编辑器数据"删 `editorProperties` / 改 `fileSafeMode` 都无效**：`editorProperties` 打开文件即从文档重建（4 864 → 463 → 4 868 字节）；`fileSafeMode=true` 被客户端写回 `false`。本轮最终靠「卸载 + 删包数据 + 装最新版」恢复，但版本与安装方式两变量同时改变，**不能归因单项**。
-55. **改已有 listener 的 action 没有 update 命令**：`delete_objects` 传 listener id（可删）→ `create_listeners` 用同名、同 target 重建 `scripted` action → `queryStateMachine` 回读 `actions[].scriptAssetId`。
+55. **改已有 listener 的 action**：~~没有 update 命令，只能删了重建~~ → **已被第 60 条取代**：可直接 `set_property_values` 改 `scriptAssetId`（键 `930`），删监听重建只作兜底。
 56. **`find_objects` 按节点名搜，中文是画面文字不是节点名**：本文件节点名是英文前缀，搜「沙 / 尘 / 全部」返回空；用 `BTN_` / `TXT_` 核对每画板各 3 条防重复副本。「全部开关」主开关语义 `next = not (sandOn and dustOn)`：两个都开才全关，否则全开。
 57. **电流"起步快、到车尾慢"不要改 `fxSpeed`**：那是总时长。存进度 `prog 0→1`，用 `0.25*p + 0.75*bezier(0.25,0.10,0.25,1.00)` 映射头部弧长；纯缓出末段斜率趋 0，会看起来"停住"，必须留 25% 线性保底。
 58. **Rive 没有羽化 clip**：`clipPath` 只有硬边。羽化 = 同一电流多边形做 N 层、`extra` 从 290 递减到 0、每层 alpha 7.5% 叠画下层图；成本 ≈ 蒙版面积 × 层数 × 电流条数，先压面积与条数再加层（660 + 双电流时 5 层就卡，290 + 单条时 8 层不卡）。
+59. **跨文件粘贴只丢脚本，不丢 ViewModel**：画板 / 图层 / 状态机 / 动画 / ViewModel 定义与实例、过渡条件里的 `viewModelId` 都会跟过去，唯独脚本资产不带——监听动作 `scriptAssetId` 变 `0-0`，点击无反应且不报错。修法：`manage_scripts` 重建 → `930` 重指 → 回读 + 预览点击；**不要重建 VM**（会多份同名，以 `conditions` 引用的 `viewModelId` 为准）。
+60. **ListenerAction 的 `scriptAssetId` 是键 `930`，可直接改**：与节点脚本的 `848` 不通用——`848` 改完不重绑（init 跑、draw 不来），`930` 改完立即生效（实测 12 个 click 监听一次性批量重指，`script_diagnostics == []`）；写字符串键 `scriptAssetId` 报 `invalid_property_key`。
+61. **"点击没反应"先排除编辑器卡顿**：本轮 12 个按钮"点不动"实为编辑器卡顿，预览恢复后同一批按钮全部正常；判定脚本问题前先重开预览。
 
 ## FAQ 路由
 

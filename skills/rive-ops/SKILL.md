@@ -96,8 +96,11 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 52. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文），改名会在重编译时重建对象（实测 `291-*`→`297-*`）并丢顺序；中文只写源码注释，顺序用 `reorder_objects` 对输入子对象 `sendToFront`，数值键 **243**、布尔 **245**。
 53. **桌面端卡 `Compiling` 先分层**：浏览器同一文件正常、桌面打开别的文件也卡 → 客户端层，不要审计文件。桌面端**不写运行日志**（`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节）；量进程：CPU 持续增长 + IO≈0 = 本地在算，不是网络。
 54. **删 `editorProperties` / 改 `fileSafeMode` 不算"重载编辑器数据"**：`editorProperties` 打开文件即从文档重建；`fileSafeMode=true` 被客户端写回 `false`。本轮最终靠「卸载 + 删包数据 + 装最新版」恢复，但版本与安装方式两变量同时改变，不能归因单项。
-55. **改已有 listener 的 action 没有 update 命令**：`delete_objects` 传 listener id（可删）→ `create_listeners` 同名同 target 重建 `scripted` action → `queryStateMachine` 回读 `actions[].scriptAssetId`。
+55. **改已有 listener 的 action**：~~没有 update 命令，只能删了重建~~ → 已被第 58 条取代：直接 `set_property_values` 改 `scriptAssetId`（键 `930`），删监听重建只作兜底。
 56. **`find_objects` 按节点名搜**，中文是画面文字不是节点名；用 `BTN_` / `TXT_` 核对每画板各 3 条防重复副本。「全部开关」主开关 `next = not (sandOn and dustOn)`：两个都开才全关，否则全开。
+57. **跨文件粘贴只丢脚本，不丢 ViewModel**：画板 / 状态机 / 动画 / ViewModel 与条件里的 `viewModelId` 都会跟过去，唯独脚本资产不带——监听动作 `scriptAssetId` 变 `0-0`，点击无反应且不报错。`manage_scripts` 重建 → 重指 → 回读 + 预览点击；**不要重建 VM**（会多份同名，以 `conditions` 引用的 id 为准）。
+58. **ListenerAction 的 `scriptAssetId` 是键 `930`，可直接改**：与节点脚本的 `848` 不通用（`848` 改完不重绑，`930` 改完立即生效）；字符串键报 `invalid_property_key`。
+59. **"点击没反应"先排除编辑器卡顿**：本轮 12 个按钮实为卡顿，预览恢复后全部正常；先重开预览再查绑定。
 
 ## 3. 脚本速用
 
@@ -173,11 +176,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 82 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 84 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/82 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/84 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序

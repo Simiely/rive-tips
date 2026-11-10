@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v1.10.0 — 2026-11-10
+
+更正一条旧结论，补一个可复用的迁移判定：**跨文件粘贴不会丢 ViewModel，只会丢脚本资产**；**ListenerAction 的 `scriptAssetId` 可以直接改（键 `930`）**，不必删监听重建。
+
+### 更正
+
+- `AGENTS.md` 第 55 条 / `docs/按钮开关与按压动效.md` §十 / `docs/速查表.md` 第 183 行：原文「MCP 没有修改已有 listener/action 的命令，只能 delete → create」改为「`set_property_values` 写键 `930` 直改，删重建降为兜底」；第 55 条标注已被第 60 条取代。
+
+### 新增
+
+- `docs/跨文件搬运画板.md` §六「粘贴后到底会丢什么」：画板 / 图层 / 状态机 / 动画 / ViewModel 定义、实例、绑定与条件引用全部保留，**只有脚本资产丢失**（`listeners[].actions[0].scriptAssetId == "0-0"`）；症状是点击完全无反应且不报错；边界限定为纯矢量、无图片 / mesh 的单画板。
+- `docs/速查表.md`：关键属性键补 `930`=scriptAssetId（ListenerAction），并与 `848`（ScriptedDrawable，改后不重绑）显式区分；「MCP 能 / 不能」同步修正；坑位表 82 → **84 行**。
+
+### 更新
+
+- `AGENTS.md`：结论先行 58 → **61 条**，文档基线 v1.10.0。
+- `skills/rive-ops/SKILL.md`：铁律 56 → **59 条**，坑位 82 → **84 行**（两处）。
+
+### 实测数据
+
+- 画板：12 层状态机 / 12 个 `click` 监听 / `ScreenClean` 12 个 boolean。
+- 粘贴后：48 条条件的 `viewModelId` 全部有效；12 个监听 `scriptAssetId` 全为 `0-0`。
+- 重指后：`script_diagnostics == []`；`simulateStateMachine(wifiActive=true)` → `WIFI_Layer` 从 `Idle` 切到 `Activating`；预览点击 12 个按钮全部正常（此前的"点不动"经确认是编辑器卡顿）。
+
 ## v1.9.0 — 2026-11-09
 
 新增「电流缓动与羽化蒙版」：把 003 定稿的两处手感改动写成可复用规则——节奏用「进度 + 缓动」而不是调 `fxSpeed`；羽化用多层硬边 `clipPath` 模拟，并给出层数与性能的取舍边界。

@@ -180,13 +180,15 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **桌面端一直 `Compiling`，浏览器同一文件正常** | 桌面端走原生编译/渲染，与浏览器 WASM 路径不同；也可能是客户端环境坏了 | 先做三层对照（同文件 / 别的文件 / 空白文件）；别的文件也卡 = 客户端层，别审计文件（[详见](desktop-compile.md)） |
 | **想读桌面端的编译日志** | 桌面端不写运行日志；`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节 | 改量进程：CPU 增量 + IO 速率 + GPU 占用；CPU 涨 + IO≈0 = 本地在算（[详见](desktop-compile.md)） |
 | **删 `editorProperties` / 改 `fileSafeMode` 想重载编辑器数据** | `editorProperties` 打开即从文档重建；`fileSafeMode` 被客户端写回 false | 两者都不是可持久化的修复开关；本轮无效，最终靠干净重装（[详见](desktop-compile.md)） |
-| **要改已有 listener 的 action** | MCP 没有 update listener/action 的命令 | `delete_objects` 删 listener → `create_listeners` 重建（`scripted` + `scriptAssetId`）→ `queryStateMachine` 回读（[详见](toggle-button.md)） |
+| **要改已有 listener 的 action** | `scriptAssetId` 在 ListenerAction 上是 `930`（节点的 `848` 不通用），且没有 update 命令 | `set_property_values` 写 `{"<actionId>":{"930":"<scriptId>"}}` → `queryStateMachine` 回读；删监听重建只作兜底（[详见](toggle-button.md)） |
 | **搜中文按钮名搜不到节点** | `find_objects` 匹配节点名；中文是画面文字，不是节点名 | 按英文前缀 `BTN_` / `TXT_` 搜，并核对每画板 3 条防副本（[详见](toggle-button.md)） |
 | **「全部开关」点一下开、再点关** | 两个独立开关的组合态没有天然"当前值" | `next = not (sandOn and dustOn)`：两个都开才全关，否则全开（[详见](toggle-button.md)） |
 | **电流起步不够快 / 末段像"停住"** | 只调 `fxSpeed` 改的是总时长；纯缓出曲线末段斜率趋 0 | 存进度 `prog`，`head = (0.25*p + 0.75*bezier(0.25,0.10,0.25,1.00)) * target`；25% 线性保底（[详见](effect-feather-easing.md)） |
 | **蒙版边缘是硬切 / 想要羽化** | Rive 的 `clipPath` 只有硬边，没有 feather | 同一形状叠 8 层，`extra` 由 290 递减到 0、每层 alpha 7.5%，srcOver 叠出渐变（[详见](effect-feather-easing.md)） |
 | **蒙版里的下层图整体偏移** | 脚本局部坐标 ≠ 画板坐标 | `clipPath` 后 `transform(Mat2D.withTranslation(-1639,-682))` 再 `drawImage`（[详见](effect-feather-easing.md)） |
 | **羽化层数一加就卡** | 成本 ≈ 蒙版面积 × 层数 × 同屏电流条数，不是层数单项 | 先压 `REVEAL_EXTRA`（660 → 290）并保证同时只有一条电流，再加层（[详见](effect-feather-easing.md)） |
+| **画板粘到别的文件后按钮全点不动，也不报错** | 剪贴板带走了画板 / 状态机 / 动画 / ViewModel，**脚本资产不跟着走**，监听动作 `scriptAssetId` 变 `0-0` 悬空 | `manage_scripts` 重建同名脚本 → `set_property_values` 键 `930` 重指 → 回读 + 预览点击（[详见](transfer.md)） |
+| **脚本已绑好，按钮还是"没反应"** | 本轮实测是编辑器卡顿，不是绑定问题：预览恢复后同一批按钮全部正常 | 先重开预览 / 等卡顿过去再点；仍无反应才查 `930` 与 ViewModel 绑定 |
 
 ## 八、画板指纹（核验口径）
 
@@ -255,7 +257,7 @@ return function(): Node<T> return { ...字段, init=init, advance=advance, draw=
 
 ### 关键属性键
 
-`848`=scriptAssetId（ScriptedDrawable）、`18`=opacity、`13/14`=xy、`16/17`=scale、`23`=blend(12=plus)、`47`=thickness、`747`=blendmode(12=additive)、`41`=visible、`20/21`=path w/h、`470`=stroke position。
+`848`=scriptAssetId（ScriptedDrawable）、`930`=scriptAssetId（ListenerAction，**可直改生效**，与 848 不通用）、`18`=opacity、`13/14`=xy、`16/17`=scale、`23`=blend(12=plus)、`47`=thickness、`747`=blendmode(12=additive)、`41`=visible、`20/21`=path w/h、`470`=stroke position。
 
 ### MCP 能/不能（脚本相关）
 
@@ -263,7 +265,7 @@ return function(): Node<T> return { ...字段, init=init, advance=advance, draw=
 |---|---|
 | `manage_scripts` 建/删/改名脚本文件 | 新建脚本节点（只能画板右键菜单） |
 | `get_scripts` 查协议类型（node/utility/…） | 挂 Path Effect 到 Stroke（属性键无槽） |
-| `recompile_all_scripts` | 改 `scriptAssetId` 后重绑运行时实例 |
+| `recompile_all_scripts` | 改 `848`（ScriptedDrawable）后重绑运行时实例；ListenerAction 的 `930` 不在此列，可直改生效 |
 
 ### 排查顺序
 

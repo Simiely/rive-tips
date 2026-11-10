@@ -113,7 +113,25 @@ switch                    1/2/10/4/6/2/2/4         MATCH
 
 但这是兜底，不是方案。画板含图片/mesh 时，重复失败的概率不低。
 
-## 六、不要做的事
+## 六、粘贴后到底会丢什么（2026-11-10 实测）
+
+把「按压效果」（12 层状态机 + 12 个 `click` 监听 + `ScreenClean` 的 12 个 boolean）从 A 文件粘到 B 文件，逐项回读：
+
+| 依赖 | 结果 | 判定方法 |
+|---|---|---|
+| 画板 / 图层 / Node / Shape | 保留 | `get_artboard_hierarchy` |
+| 状态机（层 / 状态 / 过渡 / 动画） | 保留 | `queryStateMachine` 的 `layers[]` |
+| ViewModel 定义 / 实例 / 绑定 | **保留** | `conditions[].leftComparator.viewModelId` 仍有效 |
+| 过渡条件的属性引用 | **保留** | `viewModelPropertyName` 可解析 |
+| 脚本资产（Luau） | **丢失** | `listeners[].actions[0].scriptAssetId == "0-0"` |
+
+症状很有辨识度：**点击完全无反应，也不报错**——监听还在，动作指向一个不存在的脚本。
+
+- 修法见 [按钮开关与按压动效.md](toggle-button.md)：`manage_scripts` 批量重建 → `set_property_values` 用键 `930` 重指 action。
+- **不要重建 ViewModel**：粘贴会带进多份同名定义与实例，按名字找必错；唯一准绳是 `conditions` 里实际引用的 `viewModelId`。
+- 与「随机丢失」的边界：本节只覆盖**单个纯矢量画板、无图片 / mesh** 的情况；带图片或 mesh 仍按上面的结论走 `.rev`。
+
+## 七、不要做的事
 
 - ❌ 不要靠"再粘一次"覆盖：Rive 会生成重名画板（`xxx 2`），后面清理更麻烦
 - ❌ 不要在目标文件里重建动画：状态机、关键帧、绑定关系重建等于重做
