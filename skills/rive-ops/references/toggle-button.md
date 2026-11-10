@@ -369,6 +369,7 @@ Deactivating ──(bool == true)──> Activating
 | 总开关 / 标签 | `BTN_all_on 2` / `TXT_all_switch` | `BTN_all_on` / `TXT_all_switch 2` |
 
 - 总开关语义：`next = not (sandOn and dustOn)` —— **两个都开着才全关，否则全部打开**（包括只开了一个的情况）。脚本为 `listenerAction`，`context:viewModel()` 取 `sandOn` / `dustOn` 两个 boolean，一起写同一个 `next`。
+- 迁移重建版（2026-11-10，充电桌面 `9-12391`）：代码按语义重写，**不是逐字复制**——多了 `if sand and dust then` 守卫，两个 boolean 共用一个 `local next`；与按压效果里的单属性模板（`local active = vmi:getBoolean("wifiActive")` → `if active then active.value = not active.value`）写法不同，语义与上一条一致，实测点击能正常全开 / 全关。
 - 监听器改造（2026-11-10 更正）：**可以直改，不必删重建**。`set_property_values` 支持 ListenerAction 对象 id，`scriptAssetId` 的属性键是 **`930`**（整数键；写字符串键 `scriptAssetId` 会报 `invalid_property_key`）。实测 12 个 `click` 监听一次批量重指：`queryStateMachine` 回读全部生效、`script_diagnostics` 为 `[]`、预览点击恢复正常。注意与节点脚本的键 **`848`** 区分——`848` 改完不重绑（init 跑、draw 不来），`930` 改完立即生效。删监听重建（`delete_objects` → `create_listeners`）保留为兜底。
 - ViewModel 绑定回读：画板属性键 **`583` / `584`** 是 `viewmodelid` / `viewmodelinstanceid`。本例两个画板都绑到 `CarFx`，各用独立实例，所以两画板的开关互不影响。
 - 防重复副本：`find_objects` 匹配的是**节点名**，不是画面上的中文文字。本文件节点名是英文前缀，搜「沙 / 尘 / 全部」会返回空；应搜 `BTN_` / `TXT_` 并核对每画板各 3 条，出现 `... 2 2` 之类的后缀就是重复副本。
