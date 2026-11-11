@@ -84,3 +84,15 @@ end
 ```
 
 一次验证两件事：资产能否按名取到 + drawImage 是否真的出像素（Console print 与画布同时确认）。
+
+## 七、换素材（三步，2026-11-11）
+
+1. **上传**新图：`upload_asset` 用 data URI、`name=` 纯 ASCII；返回 id 不是 `0-0` 才算真成功（重名会返假 id）。
+2. **改名字**：脚本里 `context:image('旧名')` 换成新资产名——**不带扩展名**（落库会去掉）。
+3. **改绘制参数**：缩放 = `目标显示长 ÷ 新图里素材像素长`；中心锚点用**素材本体的 bbox 中心**（图心有留白就会偏）；
+   图里已经烘了影子/光效，就把 `self.shadow` 置 `nil`，别叠第二层。
+
+改完的判据：`script_diagnostics == []`，`read_console` 里 init 的 `print` 返回 `userdata`（`nil` = 名字不对）。
+静态截图看不到——`capture_artboard` 不执行脚本。
+
+完整清单与实例见 [车沿路径走（drawImage驱动）](车沿路径走（drawImage驱动）.md) §八。
