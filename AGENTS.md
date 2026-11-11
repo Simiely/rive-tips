@@ -105,6 +105,7 @@
 - 涉及数字（工具数、画板数、状态数）注明采集日期，Early Access 阶段会变
 - **枚举只在 README**：新增/删除主题时只改 README 主题表与 AGENTS 的 FAQ 路由；`DEVELOPMENT.md` 的树只写层级与职责，不补文件名（v1.0.0→v1.4.0 期间就在那棵树上腐化了 5 篇文档）
 - **技能同步**：`skills/rive-ops/references/` 是 `docs/` 的快照，`skills/rive-ops/scripts/` 顶层文件是 `scripts/` 的字节副本。改任何 docs 或顶层 scripts 后必须运行 `tools/sync-skill.ps1`（加 `-Install` 同时刷新安装目录）；同步会按映射表把 `](中文名.md)` 重写成 `](英文名.md)`，所以快照里没有 docs 也能点开链接。`tools/sync-skill.ps1 -Check` 只校验不写入：`DRIFT` / `MISSING SCRIPT` / `SKILL-ONLY` / `STALE COUNT`（`SKILL.md` 里引用的坑位数与真实表行数不符）/ `BOM IN SKILL.md`（PS 5.1 写文件带的 BOM 会顶掉 frontmatter 的 `---`）/ 死链，任一命中就返回非零退出码（`scripts/rive-merge/` 是技能独有目录，不参与同步）。**改 `SKILL.md` 别用 `Set-Content -Encoding UTF8`**，用能控制 BOM 的方式写
+- **机器校验（link-only）**：`python tools/repo-kit/check_repo.py --root .` 只查本地链接/锚点、`SKILL.md` 契约与入口，不要求 frontmatter；内容真源仍以 `tools/sync-skill.ps1 -Check` 为准，提交前两条都必须通过。`tools/repo-kit/` 由 `tools/update-repo-kit.ps1` 安装，版本锁在 `schema/kit.lock.json`，不要手改
 
 ## 常用命令
 

@@ -28,6 +28,21 @@ rive-tips/
 
 **为什么按主题切、不按功能切**：读者的问题是"我要搬画板"而不是"我要用 `upload_rev`"。按场景切，一篇解决问题。
 
+## 机器校验（repo-kit v2.3.2 · link-only）
+
+本仓库文档不带 frontmatter，采用 `link-only` profile：repo-kit 只检查本地链接/锚点、`SKILL.md`
+契约和入口，不检查页面 schema。内容真源仍由 `tools/sync-skill.ps1 -Check` 保证。
+
+```bash
+python -m pip install -r requirements.txt
+python tools/repo-kit/check_repo.py --root .
+pwsh tools/sync-skill.ps1 -Check
+pwsh tools/update-repo-kit.ps1 -Check
+```
+
+`tools/repo-kit/` 由 `tools/update-repo-kit.ps1` 安装，版本与哈希锁在 `schema/kit.lock.json`；
+不要手改工具文件。升级时从 kit 源仓库重新运行更新脚本。
+
 ## 关键问题与方案
 
 ### 问题：导出 `.rev` 报 HandshakeException

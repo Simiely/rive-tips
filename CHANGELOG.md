@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v1.12.0 — 2026-11-11
+
+接入 repo-kit v2.3.2 的 `link-only` profile：统一机器校验入口，不改文档内容与 frontmatter 约定。
+
+### 新增
+
+- `tools/repo-kit/check_repo.py` + `schema/taxonomy.json` + `schema/kit.lock.json`：
+  只检查本地链接/锚点、`SKILL.md` 契约与入口；34 篇 docs 与 references 不要求 frontmatter。
+- `tools/update-repo-kit.ps1`：按 profile 安装工具并写版本锁，`-Check` 可在 CI 验证哈希。
+- `.github/workflows/repo-check.yml`：Ubuntu 跑 link-only 检查与版本锁，Windows 跑
+  `sync-skill.ps1 -Check`（docs → references 快照漂移）。
+- `requirements.txt`：PyYAML、markdown-it-py、jsonschema。
+
+### 约定
+
+- `AGENTS.md` 增加「机器校验（link-only）」一条：repo-kit 与 `sync-skill -Check` 提交前都要过；
+  `tools/repo-kit/` 不手改。
+- `DEVELOPMENT.md` 增加机器校验章节与三条命令。
+
+### 实测
+
+- `check_repo.py`：`PASS (ERROR=0, WARN=2)`；两条 WARN 是 `tools/runtime-check/` 与
+  `skills/rive-ops/` 的目录导航链接，属合法用法。
+- `sync-skill.ps1 -Check`：34 references + 6 scripts 全同步，0 死链。
+
 ## v1.11.1 — 2026-11-11
 
 整理导航与计数：34 篇文档全部可从 README 到达，不再靠搜索。
