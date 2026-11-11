@@ -25,7 +25,7 @@
 └─ 素材的逐帧实时公式/非循环       → 组件画板 + Input<Artboard> + 脚本 transform
 ```
 
-| 车沿路径走 | [车沿路径走（drawImage驱动）.md](car-follow-path.md) | 车带影子沿用户手绘路径行驶，起点/终点百分比控制 |
+| 车沿路径走 | [车沿路径走（drawImage驱动）.md](car-follow-path.md) | 车带影子沿用户手绘路径行驶，起点/终点百分比控制；**换车改脚本 5 个常量**（§八） |
 | 素材驱动专项 | [Context取素材与drawImage.md](context-drawimage.md) / [路径几何与坐标系映射.md](path-geometry.md) / [text_editor批量编辑边界.md](text-editor-limits.md) | 上三篇的方法论文档（契约/烘焙/边界） |
 
 ## 全部效果共享的注意事项（先读这三篇）
