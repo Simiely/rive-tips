@@ -14,6 +14,8 @@
 | 车尾沙尘 | [效果-沙尘尾流.md](sand-dust-trail.md) | 车沿路径行驶，尾流喷出沙粒 + 灰尘双层粒子（分桶批绘、无贴图） |
 | 沿路径电流（追车尾） | [效果-路径电流与脚本复用.md](aurora-path-fx.md) | 从路径右下充电图标出发的辉光电流追着车尾跑，长度随车位置自适应，两画板各用一套脚本 |
 | 电流缓动与羽化蒙版 | [效果-电流缓动与羽化蒙版.md](effect-feather-easing.md) | 电流按进度缓动（起步快、近车尾慢）；Rive 无羽化 clip，用 8 层外扩蒙版叠出渐变 |
+| 车沿路径走 | [车沿路径走（drawImage驱动）.md](car-follow-path.md) | 车带影子沿用户手绘路径行驶，起点/终点百分比控制；**换车改脚本 5 个常量**（§八） |
+| 素材驱动专项 | [Context取素材与drawImage.md](context-drawimage.md) / [路径几何与坐标系映射.md](path-geometry.md) / [text_editor批量编辑边界.md](text-editor-limits.md) | 上三篇的方法论文档（契约/烘焙/边界） |
 
 ## 选型：一个效果用哪条路线
 
@@ -24,9 +26,6 @@
 ├─ 素材的缩放/位移（循环呼吸）     → 空时间线关键帧（最简，零脚本依赖）
 └─ 素材的逐帧实时公式/非循环       → 组件画板 + Input<Artboard> + 脚本 transform
 ```
-
-| 车沿路径走 | [车沿路径走（drawImage驱动）.md](car-follow-path.md) | 车带影子沿用户手绘路径行驶，起点/终点百分比控制；**换车改脚本 5 个常量**（§八） |
-| 素材驱动专项 | [Context取素材与drawImage.md](context-drawimage.md) / [路径几何与坐标系映射.md](path-geometry.md) / [text_editor批量编辑边界.md](text-editor-limits.md) | 上三篇的方法论文档（契约/烘焙/边界） |
 
 ## 全部效果共享的注意事项（先读这三篇）
 

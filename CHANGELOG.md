@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## v1.12.0 — 2026-11-11
+
+接入 repo-kit v2.3.2 的 `link-only` profile：统一机器校验入口，不改文档内容与 frontmatter 约定。
+
+### 新增
+
+- `tools/repo-kit/check_repo.py` + `schema/taxonomy.json` + `schema/kit.lock.json`：
+  只检查本地链接/锚点、`SKILL.md` 契约与入口；34 篇 docs 与 references 不要求 frontmatter。
+- `tools/update-repo-kit.ps1`：按 profile 安装工具并写版本锁，`-Check` 可在 CI 验证哈希。
+- `.github/workflows/repo-check.yml`：Ubuntu 跑 link-only 检查与版本锁，Windows 跑
+  `sync-skill.ps1 -Check`（docs → references 快照漂移）。
+- `requirements.txt`：PyYAML、markdown-it-py、jsonschema。
+
+### 约定
+
+- `AGENTS.md` 增加「机器校验（link-only）」一条：repo-kit 与 `sync-skill -Check` 提交前都要过；
+  `tools/repo-kit/` 不手改。
+- `DEVELOPMENT.md` 增加机器校验章节与三条命令。
+
+### 实测
+
+- `check_repo.py`：`PASS (ERROR=0, WARN=2)`；两条 WARN 是 `tools/runtime-check/` 与
+  `skills/rive-ops/` 的目录导航链接，属合法用法。
+- `sync-skill.ps1 -Check`：34 references + 6 scripts 全同步，0 死链。
+
+## v1.11.1 — 2026-11-11
+
+整理导航与计数：34 篇文档全部可从 README 到达，不再靠搜索。
+
+### 更新
+
+- `README.md`：主题表补「效果索引」（14 行）；新增「更多专题」分组（素材与导入 / 动效与脚本 / 工具与界面），
+  收录主题表之外的 14 篇；技能参考 33 → **34 篇**，脚本清单补 `rive_mcp.py`。
+- `DEVELOPMENT.md`：docs 目录说明「当前 12 篇」→ **34 篇**，清单指向 README 主题表与「更多专题」。
+- `docs/效果索引.md`：把误放在代码块之后的「车沿路径走」「素材驱动专项」两行移回表格内，恢复渲染。
+- `skills/rive-ops/SKILL.md`：§5 参考清单补 `sand-dust-trail.md`（此前 33 条、正文却写 34 篇）。
+
+### 实测
+
+- `tools/sync-skill.ps1 -Check`：`34 references + 6 scripts in sync, 0 dead links`。
+- 全库 74 个 Markdown：本地链接 0 死链、锚点 0 断链；README 出发可到达全部 34 篇 docs。
+
 ## v1.11.0 — 2026-11-11
 
 补「换车」：**脚本画的素材怎么替换**（实战：充电桌面 003/004 换车图）。

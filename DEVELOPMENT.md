@@ -16,7 +16,7 @@ rive-tips/
 ├── AGENTS.md            给 AI：结论先行 + FAQ 路由 + 约定
 ├── DEVELOPMENT.md       本文件：架构 + 问题记录
 ├── CHANGELOG.md         版本历史
-├── docs/                主题文档：一主题一篇（当前 12 篇，清单见 README 主题表）
+├── docs/                主题文档：一主题一篇（当前 34 篇，清单见 README 主题表与「更多专题」）
 ├── scripts/             配合 MCP / CLI / 素材导入的验证脚本（PowerShell + Python，6 个）
 ├── tools/               runtime-check 验收页 + sync-skill 同步脚本
 └── skills/rive-ops/     WorkBuddy 技能包：SKILL.md + scripts/ + references/（docs 快照）
@@ -27,6 +27,21 @@ rive-tips/
 **为什么这棵树只写层级**：v1.0.0 的树在这里逐篇列 docs 文件名，之后每加一篇就腐化一次，到 v1.4.0 已经少了 5 篇和 3 个目录。文件枚举集中在 README 一处，这里只描述职责。
 
 **为什么按主题切、不按功能切**：读者的问题是"我要搬画板"而不是"我要用 `upload_rev`"。按场景切，一篇解决问题。
+
+## 机器校验（repo-kit v2.3.2 · link-only）
+
+本仓库文档不带 frontmatter，采用 `link-only` profile：repo-kit 只检查本地链接/锚点、`SKILL.md`
+契约和入口，不检查页面 schema。内容真源仍由 `tools/sync-skill.ps1 -Check` 保证。
+
+```bash
+python -m pip install -r requirements.txt
+python tools/repo-kit/check_repo.py --root .
+pwsh tools/sync-skill.ps1 -Check
+pwsh tools/update-repo-kit.ps1 -Check
+```
+
+`tools/repo-kit/` 由 `tools/update-repo-kit.ps1` 安装，版本与哈希锁在 `schema/kit.lock.json`；
+不要手改工具文件。升级时从 kit 源仓库重新运行更新脚本。
 
 ## 关键问题与方案
 

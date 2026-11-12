@@ -213,6 +213,7 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
 - `references/aurora-path-fx.md` —— 沿路径电流/光带：参数解码、追尾与长度自适应、圆头圆尾、辉光分层、双画板双脚本
 - `references/effect-feather-easing.md` —— 电流缓动（进度模型 + bezier）与羽化蒙版（8 层外扩、坐标对齐、性能取舍）
+- `references/sand-dust-trail.md` —— 车尾沙尘：沙粒 + 灰尘双层粒子、分桶批绘、发射跟随
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步

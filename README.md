@@ -23,8 +23,36 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 11 | [按钮开关与按压动效](docs/按钮开关与按压动效.md) | 单图标 toggle：500ms = 200ms 按下 + 300ms 抬起、B4B4B4 35% 浮层、橙点、Listener Action Script、一按钮一层 |
 | 12 | [速查表](docs/速查表.md) | 一页纸：端点、命令、值格式、坑位对照 |
 | 13 | [桌面端编译卡死排查](docs/桌面端编译卡死排查.md) | 浏览器正常、客户端卡 `Compiling`：分层对照、无运行日志、CPU/IO 判据、无效操作与归因边界 |
+| 14 | [效果索引](docs/效果索引.md) | 粒子 / 辉光 / 电流 / 沙尘等 8 个效果的总入口，按「效果 → 实现路线 → 定稿参数」组织 |
 
 > 说明：颜色管理、音频事件、GPU Canvas / 3D、Flash 导入、Semantics 无障碍等主题，因未在本环境逐一验证，暂不收录，验证后再补。
+
+## 更多专题
+
+主题表只列主干；以下按用途分组，避免 34 篇文档只能靠搜索找到。
+
+**素材与导入**
+
+- [路径几何与坐标系映射](docs/路径几何与坐标系映射.md) — 画板 / 路径 / 脚本坐标的换算与边界
+- [Context取素材与drawImage](docs/Context取素材与drawImage.md) — `context:image()` 取素材、绘制与换素材
+- [画板素材的代码驱动缩放呼吸](docs/画板素材的代码驱动缩放呼吸.md) — 现成辉光 Image 的缩放呼吸
+
+**动效与脚本**
+
+- [关键帧动画MCP实操](docs/关键帧动画MCP实操.md) — 用 MCP 建关键帧、时间线与插值器
+- [关键帧循环防倒飞](docs/关键帧循环防倒飞.md) — 循环动画首尾帧与倒飞问题
+- [程序化动画Luau脚本](docs/程序化动画Luau脚本.md) — Node 脚本的 init / draw 生命周期与绘制铁律
+- [脚本节点安装边界](docs/脚本节点安装边界.md) — 哪些能自动建、哪些必须右键手加
+- [脚本颜色与透明度量纲](docs/脚本颜色与透明度量纲.md) — `Color.rgba` 的 0–255 量纲与探针
+- [text_editor批量编辑边界](docs/text_editor批量编辑边界.md) — 文本批量改写的能与不能
+- [PathEffect描边流动](docs/PathEffect描边流动.md) — 沿真实轮廓行进的描边动画
+- [多图层叠辉光](docs/多图层叠辉光.md) — 辉光分层叠加与性能取舍
+- [车沿路径走（drawImage驱动）](docs/车沿路径走（drawImage驱动）.md) — 车带影子沿手绘路径行驶；换车改 5 个常量
+
+**工具与界面**
+
+- [编辑器2026界面变更对照](docs/编辑器2026界面变更对照.md) — 新界面里命令与入口的对应关系
+- [capture与陈旧渲染](docs/capture与陈旧渲染.md) — 截图前置、403/黑屏与旧图判据
 
 ## 文档
 
@@ -48,7 +76,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
-Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + rive-merge 套件 5 个 Python + svg-prep + 33 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + `rive_mcp.py` + `svg-prep.py` + rive-merge 套件 5 个 Python + 34 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
 
 ## 四个最容易踩的坑
 
