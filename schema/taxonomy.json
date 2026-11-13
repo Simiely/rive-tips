@@ -1,0 +1,40 @@
+{
+  "version": "2.4.0",
+  "name": "rive-tips",
+  "include": [
+    "README.md",
+    "AGENTS.md",
+    "DEVELOPMENT.md",
+    "CHANGELOG.md",
+    "docs/**"
+  ],
+  "context_files": ["AGENTS.md"],
+  "exempt_basenames": ["README.md", "DEVELOPMENT.md", "CHANGELOG.md"],
+  "slugger": "github",
+  "summary_policy": "off",
+  "link_only_files": ["docs/**"],
+  "types": ["tutorial", "how-to", "reference", "explanation"],
+  "kinds": ["standard", "decision", "index", "note", "glossary", "report", "pitfall"],
+  "statuses": ["draft", "active", "resolved", "superseded", "archived"],
+  "tiers": ["normal", "critical"],
+  "confidences": ["low", "medium", "high"],
+  "topics": ["governance", "development"],
+  "relations": {
+    "depends-on": { "direction": "directed", "inverse": "depended-on-by", "transitive": false },
+    "extends": { "direction": "directed", "inverse": "extended-by", "transitive": true },
+    "spawned-from": { "direction": "directed", "inverse": "spawned", "transitive": false },
+    "supersedes": { "direction": "directed", "inverse": "superseded-by", "transitive": false },
+    "contradicts": { "direction": "symmetric", "inverse": null, "transitive": false },
+    "see-also": { "direction": "symmetric", "inverse": null, "transitive": false }
+  },
+  "review_days": { "normal": 365, "critical": 90 },
+  "entry_files": [],
+  "generated_files": [],
+  "ignore": [
+    ".github/**",
+    "tools/**",
+    "scripts/**",
+    "skills/**",
+    "**/__pycache__/**"
+  ]
+}
