@@ -28,6 +28,7 @@
         效果-路径电流与脚本复用.md -> aurora-path-fx.md
         效果-电流缓动与羽化蒙版.md -> effect-feather-easing.md
         桌面端编译卡死排查.md     -> desktop-compile.md
+        桌面端打不开排查.md       -> desktop-launch.md
         capture与陈旧渲染.md      -> capture-stale.md
         Context取素材与drawImage.md -> context-drawimage.md
         PathEffect描边流动.md     -> patheffect-flow.md
@@ -106,6 +107,7 @@ $map = [ordered]@{
     '效果-路径电流与脚本复用.md' = 'aurora-path-fx.md'
     '效果-电流缓动与羽化蒙版.md' = 'effect-feather-easing.md'
     '桌面端编译卡死排查.md'     = 'desktop-compile.md'
+    '桌面端打不开排查.md'       = 'desktop-launch.md'
     'capture与陈旧渲染.md'      = 'capture-stale.md'
     'Context取素材与drawImage.md' = 'context-drawimage.md'
     'PathEffect描边流动.md'     = 'patheffect-flow.md'

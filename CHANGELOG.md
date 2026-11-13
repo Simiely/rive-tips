@@ -1,4 +1,4 @@
-# CHANGELOG
+﻿# CHANGELOG
 
 ## 2026-11-16 · 文档维护：升级 repo-kit 2.5.3 / 规范 2.1.2
 
@@ -7,6 +7,34 @@ link-only 档：只换校验器与锁，不跑生成器（本仓 `generated_file
 - 重装 kit：`schema/kit.lock.json` 写入 `v2.5.3 / spec 2.1.2`
 - 扫描范围原本已含四件套，无需改动
 - 验收：`REPO CHECK: PASS`（ERROR=0、WARN=0）、`GENERATE CHECK: PASS`
+## v1.13.0 — 2026-11-13
+
+补一篇桌面端启动排查：把「双击没反应」与「卡 Compiling」分开，记录无窗口僵尸进程占单实例锁的判据、取证链，以及「直接跑 exe」的无包身份陷阱。
+
+### 新增
+
+- `docs/桌面端打不开排查.md`（→ `references/desktop-launch.md`）：三种「打不开」分流、进程判据、修复命令、`rive_native` 5 条事件 + Sentry `duration` 取证、无包身份陷阱、未验证线索。
+
+### 更新
+
+- `README.md`：主题表 14 → 15 行；快速开始 +1；Skill 参考篇数 33 → 37。
+- `AGENTS.md`：结论先行 66 → 68 条（僵尸进程、别直接跑 exe）；FAQ 路由 +1。
+- `docs/速查表.md`：坑位表 90 → 92 行。
+- `tools/sync-skill.ps1`：映射 +1（`desktop-launch.md`）。
+- `skills/rive-ops/SKILL.md`：任务路由 +1、参考清单 +1、坑位引用 90 → 92、references 36 → 37。
+- `CONTRIBUTING.md`：四件计数 90/36/66/61 → 92/37/68/61；主题表序号 #1~#13 → #1~#15。
+
+### 实测
+
+- 11/12 19:31 启动的运行在 13.5 秒后写 `fatal`，窗口消失但进程存活至 11/13 17:06（`MainWindowHandle = 0`，CPU 累计 389 秒）。
+- 11/13 16:41–16:47 共 9 次启动，每次 0.3–0.7 秒退出；每次只写 5 条 `rive_native` 事件，Sentry `duration = 4e-06–9e-06`。
+- 结束残留进程后经开始菜单激活，1.1 秒出窗，15 秒后仍响应正常。
+- 对照：直接运行包内 exe（无包身份）0.32 秒退出、stderr 无异常，不能作为启动测试。
+- `tools/sync-skill.ps1 -Check`：`OK: 37 references + 6 scripts in sync, 0 dead links.`（EXIT=0）
+
+### 计数
+
+- 坑位表 90 → 92；references 36 → 37；结论先行 66 → 68；铁律 61 → 61。
 
 ## v1.12.0 — 2026-11-13
 

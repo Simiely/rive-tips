@@ -34,6 +34,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 交互做了但代码驱动不了 | 查 `inputs` / `dataBinds`（铁律 14）→ 补 ViewModel 触发并 `bindViewModelToArtboard` | `references/binding.md` |
 | 打开慢 / 素材字体转圈 / 资产瘦身 | `listAssets` → 图片 `206` / 字体 `279` 审计 → `delete_objects` 删未使用 → fontTools 子集化 | `references/performance.md` |
 | 桌面端一直 `Compiling` / 浏览器正常 | 先三层对照（同文件 / 别的文件 / 空白文件）→ 量进程 CPU 增量 + IO：CPU 涨 + IO≈0 = 本地在算 → 别找日志，客户端不写 | `references/desktop-compile.md` |
+| 双击没反应 / 进程 1 秒内退出 | 查 `RiveEarlyAccess` 是否 `MainWindowHandle=0` 的残留进程（占单实例锁）→ 结束再启动；别用直接跑 exe 判断 | `references/desktop-launch.md` |
 | 按钮按压 / 开关 / 激活态 | 浮层 + 橙点 → 30 帧动画 → ViewModel bool → Listener Action Script toggle → 一按钮一层状态机 | `references/toggle-button.md` |
 | 沿路径电流 / 光带追尾 / 长度自适应 | 离线展平路径 → 沿法向铺窄条 → 顺时针绕序 + 圆头圆尾 → 加宽羽化叠加做辉光；`tail = car.dist - gap`，长度按进度 `clamp` | `references/aurora-path-fx.md` |
 | 电流快慢节奏 / 光晕羽化蒙版 | 存进度 `prog` → bezier 缓动映射头部；蒙版 = 同一形状 8 层外扩（290→0）+ 每层 7.5% 叠加，`clipPath` 后先平移回画板坐标 | `references/effect-feather-easing.md` |
@@ -180,11 +181,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 90 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 92 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/90 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/92 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
@@ -196,6 +197,7 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/binding.md` —— 数据绑定与状态机驱动：两套模型、三个绑定坑、无头验证
 - `references/performance.md` —— 打开慢/素材字体转圈：无磁盘缓存、资产审计、`delete_objects` 删资产、字体子集化
 - `references/desktop-compile.md` —— 桌面端卡 `Compiling`：分层对照、无运行日志、CPU/IO 判据、无效操作与归因边界
+- `references/desktop-launch.md` —— 桌面端打不开：无窗口僵尸占单实例锁、进程判据、`rive_native` + Sentry 取证、无包身份陷阱、未验证线索
 - `references/capture-stale.md` —— capture 与陈旧渲染：focus 前置、403/黑屏、旧图判据
 - `references/context-drawimage.md` —— Context 取素材与 drawImage
 - `references/patheffect-flow.md` —— PathEffect 描边流动
@@ -223,5 +225,5 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；36 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；37 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
 - 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。入库的完整 7 步流程见仓库根目录 `CONTRIBUTING.md`；`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。
