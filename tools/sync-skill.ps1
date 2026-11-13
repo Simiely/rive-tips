@@ -46,6 +46,8 @@
         脚本颜色与透明度量纲.md   -> script-color-units.md
         路径几何与坐标系映射.md   -> path-geometry.md
         车沿路径走（drawImage驱动）.md -> car-follow-path.md
+        换素材后动画不生效.md     -> asset-swap-anim-break.md
+        效果-径向渐变扩散环.md    -> radial-pulse-rings.md
     Plus: tools/runtime-check/index.html -> assets/runtime-check-index.html
 
     And scripts/* -> skills/rive-ops/scripts/* (same basename, top level only).
@@ -122,6 +124,8 @@ $map = [ordered]@{
     '脚本颜色与透明度量纲.md'   = 'script-color-units.md'
     '路径几何与坐标系映射.md'   = 'path-geometry.md'
     '车沿路径走（drawImage驱动）.md' = 'car-follow-path.md'
+    '换素材后动画不生效.md'     = 'asset-swap-anim-break.md'
+    '效果-径向渐变扩散环.md'    = 'radial-pulse-rings.md'
 }
 
 function Convert-DocLinks {

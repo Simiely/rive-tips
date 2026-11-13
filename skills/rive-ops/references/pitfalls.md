@@ -189,6 +189,12 @@ rive push work\out --project=<file id> --name=<ASCII 名>
 | **羽化层数一加就卡** | 成本 ≈ 蒙版面积 × 层数 × 同屏电流条数，不是层数单项 | 先压 `REVEAL_EXTRA`（660 → 290）并保证同时只有一条电流，再加层（[详见](effect-feather-easing.md)） |
 | **画板粘到别的文件后按钮全点不动，也不报错** | 剪贴板带走了画板 / 状态机 / 动画 / ViewModel，**脚本资产不跟着走**，监听动作 `scriptAssetId` 变 `0-0` 悬空 | `manage_scripts` 重建同名脚本 → `set_property_values` 键 `930` 重指 → 回读 + 预览点击（[详见](transfer.md)） |
 | **脚本已绑好，按钮还是"没反应"** | 本轮实测是编辑器卡顿，不是绑定问题：预览恢复后同一批按钮全部正常 | 先重开预览 / 等卡顿过去再点；仍无反应才查 `930` 与 ViewModel 绑定 |
+| **换素材后动画完全不跳** | 关键帧打在旧节点上，旧节点只是被 `opacity=0` 藏起来没删；新素材是它的**兄弟** | `queryKeyFrames` 看 `objectId` 在不在新素材祖先链；给新对象自己补键，**别**塞进 `opacity=0` 的旧节点（[详见](asset-swap-anim-break.md)） |
+| **素材放大时往右下跑 / 直接飞出画板** | 实例 `x/y` 是**左上角**不是中心；给位于 `(0,0)` 的外层组打缩放 = 绕画板原点放大 | 被缩放节点的原点移到几何 bbox 视觉中心，直接子节点反向平移抵消（[详见](asset-swap-anim-break.md)） |
+| **渐变环偏亮、边缘发虚** | CSS `radial-gradient(circle)` 的 100% 在**最远角**，圆边界在 `1/√2`；不校正渐变提前到边 | `Gradient.radial(..., r * math.sqrt(2), ...)`（[详见](radial-pulse-rings.md)） |
+| **单个形状要不同透明度，但脚本没有 `globalAlpha`** | canvas 脚本只有乘法因子，没有独立全局透明度 | `save()` → `modulateOpacity(op)` → `drawPath` → `restore()`；别为透明度建 alpha 分桶（[详见](radial-pulse-rings.md)） |
+| **`query_property_values` 报 `propertyKeys must be a map`** | 参数名不是 `queries` | 形状是 `propertyKeys: { "对象id": [键,...] }` |
+| **`capture_artboard` 结果里找不到图** | `result.content[0]` 是文字说明 | 图在 `result.content[1]['data']`（base64） |
 
 ## 八、画板指纹（核验口径）
 

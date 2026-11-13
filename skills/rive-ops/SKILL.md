@@ -37,6 +37,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 按钮按压 / 开关 / 激活态 | 浮层 + 橙点 → 30 帧动画 → ViewModel bool → Listener Action Script toggle → 一按钮一层状态机 | `references/toggle-button.md` |
 | 沿路径电流 / 光带追尾 / 长度自适应 | 离线展平路径 → 沿法向铺窄条 → 顺时针绕序 + 圆头圆尾 → 加宽羽化叠加做辉光；`tail = car.dist - gap`，长度按进度 `clamp` | `references/aurora-path-fx.md` |
 | 电流快慢节奏 / 光晕羽化蒙版 | 存进度 `prog` → bezier 缓动映射头部；蒙版 = 同一形状 8 层外扩（290→0）+ 每层 7.5% 叠加，`clipPath` 后先平移回画板坐标 | `references/effect-feather-easing.md` |
+| 底盘脉冲扩散 / 多圈光环外扩 | `init` 建**一枚圆 + 一条 `Gradient.radial`** → 之后只 `Mat2D.withScale`；渐变半径 **×√2**（CSS 最远角）；单环淡出用 `save → modulateOpacity → restore`；多环靠 `phase + k×INTERVAL` 反推年龄 | `references/radial-pulse-rings.md` |
+| 换素材后动画不跳 / 跳了但位置漂 | `queryKeyFrames` 查键打在哪个 `objectId`（是不是 `opacity=0` 的旧节点）→ 给新对象自己补键；要缩放先把原点移到 bbox 视觉中心、子节点反向补偿 → `capture` 前后逐像素 `max diff = 0` | `references/asset-swap-anim-break.md` |
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
@@ -101,6 +103,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 57. **跨文件粘贴只丢脚本，不丢 ViewModel**：画板 / 状态机 / 动画 / ViewModel 与条件里的 `viewModelId` 都会跟过去，唯独脚本资产不带——监听动作 `scriptAssetId` 变 `0-0`，点击无反应且不报错。`manage_scripts` 重建 → 重指 → 回读 + 预览点击；**不要重建 VM**（会多份同名，以 `conditions` 引用的 id 为准）。
 58. **ListenerAction 的 `scriptAssetId` 是键 `930`，可直接改**：与节点脚本的 `848` 不通用（`848` 改完不重绑，`930` 改完立即生效）；字符串键报 `invalid_property_key`。
 59. **"点击没反应"先排除编辑器卡顿**：本轮 12 个按钮实为卡顿，预览恢复后全部正常；先重开预览再查绑定。
+60. **换素材后动画不跳，先查键打在谁身上**：旧节点通常只被 `opacity=0` 藏起来、没删，关键帧还留在它身上，新素材是它的**兄弟**。判据 = `queryKeyFrames` 的 `objectId` 不在新素材的祖先链上。**别把新素材塞进旧节点"继承"动画**——旧节点透明，塞进去连新素材一起隐藏。
+61. **缩放素材前先移锚点**：SVG / Image 实例的 `x/y` 是**左上角**；给位于 `(0,0)` 的**外层组**打缩放是绕**画板原点**，内容飞出画板。正解：被缩放节点的原点 = 素材几何 bbox 视觉中心，直接子节点反向平移抵消。只改结构的操作，用「改前/改后 `capture` 逐像素 `max diff = 0`」验收。
 
 ## 3. 脚本速用
 
@@ -176,11 +180,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 84 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 90 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/84 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/90 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
@@ -201,6 +205,8 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/layered-glow.md` —— 多图层叠辉光
 - `references/particle-gather.md` —— 粒子汇聚
 - `references/energy-ring.md` —— 能量光圈
+- `references/radial-pulse-rings.md` —— 径向渐变扩散环：静态圆 + 径向渐变（×√2 最远角）、`modulateOpacity` 单环淡出、多环时间模型、时间膨胀调参
+- `references/asset-swap-anim-break.md` —— 换素材后动画不生效：键打错对象 / 缩放锚点在左上角 / 零位移验收
 - `references/pulse-glow.md` —— 脉冲辉光与呼吸灯
 - `references/effects-index.md` —— 效果索引
 - `references/artboard-breathe.md` —— 画板素材的代码驱动缩放呼吸
@@ -217,5 +223,5 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；34 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
-- 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；36 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。入库的完整 7 步流程见仓库根目录 `CONTRIBUTING.md`；`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。

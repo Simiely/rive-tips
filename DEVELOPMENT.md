@@ -16,7 +16,7 @@ rive-tips/
 ├── AGENTS.md            给 AI：结论先行 + FAQ 路由 + 约定
 ├── DEVELOPMENT.md       本文件：架构 + 问题记录
 ├── CHANGELOG.md         版本历史
-├── docs/                主题文档：一主题一篇（当前 12 篇，清单见 README 主题表）
+├── docs/                主题文档：一主题一篇（篇数不写死，清单见 README 主题表与 docs/效果索引.md）
 ├── scripts/             配合 MCP / CLI / 素材导入的验证脚本（PowerShell + Python，6 个）
 ├── tools/               runtime-check 验收页 + sync-skill 同步脚本
 └── skills/rive-ops/     WorkBuddy 技能包：SKILL.md + scripts/ + references/（docs 快照）
