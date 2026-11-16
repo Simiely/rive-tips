@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-11-16 · 文档维护：升级 repo-kit 2.5.3 / 规范 2.1.2
+
+link-only 档：只换校验器与锁，不跑生成器（本仓 `generated_files` 为空，AGENTS 手写）。
+
+- 重装 kit：`schema/kit.lock.json` 写入 `v2.5.3 / spec 2.1.2`
+- 扫描范围原本已含四件套，无需改动
+- 验收：`REPO CHECK: PASS`（ERROR=0、WARN=0）、`GENERATE CHECK: PASS`
+
 ## v1.12.0 — 2026-11-13
 
 补两篇动效/诊断文档，并把散在三处的**入库标准**合成一份可执行清单。
