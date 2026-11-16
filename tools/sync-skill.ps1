@@ -128,6 +128,8 @@ $map = [ordered]@{
     '车沿路径走（drawImage驱动）.md' = 'car-follow-path.md'
     '换素材后动画不生效.md'     = 'asset-swap-anim-break.md'
     '效果-径向渐变扩散环.md'    = 'radial-pulse-rings.md'
+    '动态效果定义表-SVG.md'     = 'motion-spec-svg.md'
+    '效果-icon图形填充.md'      = 'icon-graphic-fill.md'
 }
 
 function Convert-DocLinks {

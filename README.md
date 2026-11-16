@@ -25,6 +25,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 | 13 | [桌面端编译卡死排查](docs/桌面端编译卡死排查.md) | 浏览器正常、客户端卡 `Compiling`：分层对照、无运行日志、CPU/IO 判据、无效操作与归因边界 |
 | 14 | [换素材后动画不生效](docs/换素材后动画不生效.md) | 换掉带动画的素材后「不跳」或「跳但漂」：前者是键打在 `opacity=0` 的旧节点上，后者是缩放锚点在左上角；含零位移验收 |
 | 15 | [桌面端打不开排查](docs/桌面端打不开排查.md) | 双击无反应、进程 1 秒内退出：无窗口僵尸占单实例锁；进程判据、取证链、无包身份陷阱 |
+| 16 | [动态效果定义表（SVG）](docs/动态效果定义表-SVG.md) | 一页 SVG 写清"什么时间做什么"：统一时间栅格、方块内标曲线、事件带秒数、按首事件排序 |
 
 > 说明：颜色管理、音频事件、GPU Canvas / 3D、Flash 导入、Semantics 无障碍等主题，因未在本环境逐一验证，暂不收录，验证后再补。
 
@@ -51,7 +52,7 @@ Rive 实操技巧速查手册，按主题索引。内容经官方文档核实 + 
 
 工具：[`tools/runtime-check/`](tools/runtime-check/) —— 本地运行时验收页，列出 `.riv` 实际包含的画板并渲染，是"能不能交付"的判据。
 
-Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + rive-merge 套件 5 个 Python + svg-prep + 37 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
+Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打包成 WorkBuddy 技能（SKILL.md + 4 个 PowerShell 脚本 + rive-merge 套件 5 个 Python + svg-prep + 39 篇参考 + 验收页），安装到 `~/.workbuddy/skills/rive-ops/` 即可在对话中自动触发。**改 docs 后运行 `tools/sync-skill.ps1 -Install` 保持技能与文档同步**（`references/` 是 `docs/` 的快照，同步时会重写相对链接）；`tools/sync-skill.ps1 -Check` 可校验漂移与死链。
 
 ## 四个最容易踩的坑
 
@@ -79,5 +80,6 @@ Agent Skill：[`skills/rive-ops/`](skills/rive-ops/) —— 把本库精华打�
 - **打开文件很慢 / 素材字体一直转圈** → [性能诊断与资产瘦身](docs/性能诊断与资产瘦身.md)
 - **客户端一直 Compiling / 浏览器正常** → [桌面端编译卡死排查](docs/桌面端编译卡死排查.md)
 - **双击 Rive 没反应 / 进程闪退** → [桌面端打不开排查](docs/桌面端打不开排查.md)
+- **要把动效整理成可评审的规范表（什么时间做什么）** → [动态效果定义表（SVG）](docs/动态效果定义表-SVG.md)
 - **不确定选哪个运行时** → [运行时选型与车机落地](docs/运行时选型与车机落地.md)
 - **交互做了但代码驱动不了** → [数据绑定与状态机驱动](docs/数据绑定与状态机驱动.md)

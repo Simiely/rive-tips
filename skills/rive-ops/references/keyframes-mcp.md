@@ -80,3 +80,27 @@ for trip in range(n):
 | 透明度量纲 | 以为没画出来，实际是 alpha=1/255 | 先排查量纲，再排查渲染 |
 | 层级面板不刷新 | MCP 加的 Fill/Stroke 在编辑器层级里不显示 | 层级只显示 Path 子行（官方行为）；样式在右面板 |
 | 删除 ScriptAsset | 连带删除引用它的节点 | 改脚本内容，别删了重建 |
+
+## 七、插值曲线编辑（modifyKeyFrames）
+
+`modifyKeyFrames` 同时支持 `change`（改值/改曲线）与 `delete`（删点），可一次批量提交。
+
+```json
+{"command":"modifyKeyFrames","data":{"modifyKeyFrames":{
+  "animationId":"9-10687",
+  "delete":["20-196"],
+  "change":[{"keyframeId":"20-195","interpolationType":"cubic",
+             "cubicParams":{"x1":0.42,"y1":0,"x2":0.58,"y2":1}}]}}}
+```
+
+| 项 | 说明 |
+|---|---|
+| 曲线名 | `linear` / `cubic` / `hold`；缓入缓出 = `cubicParams {0.42, 0, 0.58, 1}`，ease-out = `{0, 0, 0.58, 1}` |
+| 控制关键帧 | 一段曲线的形状由**该段起点关键帧**的插值决定（终点帧的插值管下一段） |
+| 插值器复用 | 给已有 cubic 关键帧改 `cubicParams` 时**原插值器对象会被原地更新**（返回同一 `interpolatorId`）；给 linear 帧改 cubic 会新建插值器 |
+| 回读验证 | `query_property_values` 查插值器键 **63/64/65/66**（=x1/y1/x2/y2），确认参数真的写进去了 |
+| 合并整段 | 想要"整段一个缓动"：`delete` 掉中间关键帧，把段首帧改成目标 cubic；分段 ease-out 改整段 ease-in-out 就是这一步 |
+| 同步多层 | 同一效果的每一层（核心 + 辉光）各有独立关键帧，删中间帧/改曲线必须逐层做，改完逐层回读 |
+
+坑：只改 `interpolationType` 不传 `cubicParams` 会沿用旧参数；改完不报错但视觉没变，先查插值器参数再查别的。
+

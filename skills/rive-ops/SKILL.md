@@ -40,6 +40,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 9791   # Rive 桌面版 MCP，A
 | 电流快慢节奏 / 光晕羽化蒙版 | 存进度 `prog` → bezier 缓动映射头部；蒙版 = 同一形状 8 层外扩（290→0）+ 每层 7.5% 叠加，`clipPath` 后先平移回画板坐标 | `references/effect-feather-easing.md` |
 | 底盘脉冲扩散 / 多圈光环外扩 | `init` 建**一枚圆 + 一条 `Gradient.radial`** → 之后只 `Mat2D.withScale`；渐变半径 **×√2**（CSS 最远角）；单环淡出用 `save → modulateOpacity → restore`；多环靠 `phase + k×INTERVAL` 反推年龄 | `references/radial-pulse-rings.md` |
 | 换素材后动画不跳 / 跳了但位置漂 | `queryKeyFrames` 查键打在哪个 `objectId`（是不是 `opacity=0` 的旧节点）→ 给新对象自己补键；要缩放先把原点移到 bbox 视觉中心、子节点反向补偿 → `capture` 前后逐像素 `max diff = 0` | `references/asset-swap-anim-break.md` |
+| 图标从下往上填满 / 半缺环绕行 / 缺口被填满 | 闪电用**垂直线性渐变 + 两个同位置 stop**（硬切液面）、动画 stop position；环用原生 trim（`114/115/116`）+ **`isclosed=false`**；端点角度顶点反算 | `references/icon-graphic-fill.md` |
+| 动效要整理成"什么时间做什么"的规范表 | 一页 SVG：时间栅格（秒→x）、方块内标曲线、事件带秒数、起止百分比、按首事件排序 | `references/motion-spec-svg.md` |
 
 ## 2. 铁律（违反任意一条都会浪费半小时以上）
 
@@ -181,11 +183,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 | **整组内容消失，原文件里有 `<use>`** | 服务端转换器不解析 `<use>` | 本地展开成内联 `<g>`（铁律 40） |
 | **`<use>` 展开后该组 0 条 path** | 引用的字形轮廓已被上游裁掉 | 跳过该组，别重试（铁律 41） |
 
-完整 92 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
+完整 94 行对照表：`references/pitfalls.md`。表里没有的症状，先去那里按关键词搜一遍，再决定读哪篇。
 
 ## 5. 参考文件（按需加载）
 
-- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/92 行对照）
+- `references/pitfalls.md` —— 坑位速查（端点/命令/值格式/94 行对照）
 - `references/mcp.md` —— MCP 40 工具分组、实测行为、联调套路
 - `references/cli.md` —— CLI 与 RML：项目结构、三查、值格式、签名与水位印
 - `references/audit.md` —— 画板体检与交付整理：八项指纹、六类高频问题、整理顺序
@@ -221,9 +223,11 @@ python .\scripts\svg-prep.py verify D:\out\shot.png D:\out\ref.png --size 2048x1
 - `references/toggle-button.md` —— 按钮开关/按压：500ms 总时长、浮层/橙点、脚本 toggle、一按钮一层
 - `references/aurora-path-fx.md` —— 沿路径电流/光带：参数解码、追尾与长度自适应、圆头圆尾、辉光分层、双画板双脚本
 - `references/effect-feather-easing.md` —— 电流缓动（进度模型 + bezier）与羽化蒙版（8 层外扩、坐标对齐、性能取舍）
+- `references/motion-spec-svg.md` —— 动态效果定义表（SVG）：统一时间栅格、方块内标曲线、事件带秒数、按首事件排序、防重叠布局
+- `references/icon-graphic-fill.md` —— icon 图形填充：渐变液面（同位置 stop 硬切 + position 动画）、trim 绕行、`isclosed` 默认闭合坑、缺口角度顶点反算
 - `assets/runtime-check-index.html` —— 运行时验收页（配 `npm i @rive-app/webgl2` + 静态服务器）
 
 ## 6. 来源与同步
 
-- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；37 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
+- 本技能是 [Simiely/rive-tips](https://github.com/Simiely/rive-tips) 的技能化快照；39 篇 `references/` 一一对应仓库 `docs/`（`pitfalls.md` 即 `速查表.md`）。同步复制时会重写相对链接，所以本目录没有 `docs/` 也能正常跳转。
 - 仓库文档更新后，在仓库根目录运行 `tools/sync-skill.ps1 -Install` 重新同步快照并刷新安装目录——**不要手改 references/**，改仓库的 docs。入库的完整 7 步流程见仓库根目录 `CONTRIBUTING.md`；`tools/sync-skill.ps1 -Check` 只校验不写入（漂移 / 未映射文档 / 死链）。
