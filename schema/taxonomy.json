@@ -1,5 +1,5 @@
 {
-  "version": "2.5.3",
+  "version": "2.7.0",
   "name": "rive-tips",
   "include": [
     "README.md",
@@ -8,11 +8,17 @@
     "CHANGELOG.md",
     "docs/**"
   ],
-  "context_files": ["AGENTS.md"],
-  "exempt_basenames": ["README.md", "DEVELOPMENT.md", "CHANGELOG.md"],
-  "slugger": "github",
-  "summary_policy": "off",
-  "link_only_files": ["docs/**"],
+  "frontmatter_exempt": {
+    "names": [
+      "AGENTS.md",
+      "CHANGELOG.md",
+      "DEVELOPMENT.md",
+      "README.md"
+    ],
+    "paths": [
+      "docs/**"
+    ]
+  },
   "types": ["tutorial", "how-to", "reference", "explanation"],
   "kinds": ["standard", "decision", "index", "note", "glossary", "report", "pitfall"],
   "statuses": ["draft", "active", "resolved", "superseded", "archived"],
@@ -28,7 +34,6 @@
     "see-also": { "direction": "symmetric", "inverse": null, "transitive": false }
   },
   "review_days": { "normal": 365, "critical": 90 },
-  "entry_files": [],
   "generated_files": [],
   "ignore": [
     ".github/**",
