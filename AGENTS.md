@@ -26,66 +26,8 @@
 10. **`.gitattributes` 必须有 `*.riv binary`**，否则 Windows 换行转换会损坏文件
 11. **`.riv` 只装「默认画板 + 组件画板」**，其余画板连同动画/状态机被排除。画板的 `includeInExport` 属性**不是**导出开关（写入无效），判据是 `isComponent`。交付前必须核验，或每屏拆一个文件
 12. **字体 Type 必须是 Embedded**：编辑器里"等一会正常"是云端取字体；`.riv` 里没有字体数据时运行时中文**永久豆腐**
-13. **AI 导 SVG 给 Rive 前必须把文字转轮廓**：否则 Rive 按 font-family 落到内置 Inter 字体（无 CJK），中文全灭
-14. **`upload_asset` 只认 data URI**；传路径返回假 id `0-0`。**一切属性写入必须回读验证**（批量写入会静默失败）
-15. **Illustrator COM 第一行设 `DONTDISPLAYALERTS`**，否则弹窗挂死 COM；`Artboards` 集合禁止 foreach 枚举。
-16. **桌面编辑器没有素材磁盘缓存**：每次打开从云端拉全量资产；打开慢先做资产审计，不要先改 DNS 或装系统字体。
-17. **`delete_objects` 也能删资产 ID**（实测）；`upload_asset` 重名返回假 `0-0`，换唯一名后再用属性键 `203` 改名；幽灵 `0-0` 重启后消失。
-18. **字体一直转圈 / Not Found** 先验证字体文件；旧资产记录卡住时重传/子集化。子集化后必须校验字符覆盖、回读 `279`、截图对比，并保留全量字体 `.rev`。
-19. **按压动效总时长 500ms = 按下 200ms + 抬起 300ms**；不要把 500ms 当成抬起段再加 200ms（42 帧会明显偏长）。
-20. **多个开关按钮必须一按钮一层状态机**；所有按钮塞在同一个 Layer 时，只能有一个按钮保持激活。
-21. **点击切换用 Listener Action Script 读 boolean 取反**；脚本类型必须是 `listenerAction`，`context:viewModel()` 前必须把 ViewModel 绑定到画板。
-22. **要"把 A 并进 B 且不清空 B"** → `upload_rev` 做不到（要求目标零画板）。走 `.rev` → `rive create` 两个 CLI 工程 → `skills/rive-ops/scripts/rive-merge/rml_merge.py` → `fill_assets.py` → `gate.py --fix --verify` → `rive push`。
-23. **`rive --verify` / `--once` 无任何输出直接崩（exit `3221226505` = `0xC0000409`）** → 先查**资产文件名**：中文/全角名必崩，同一份字节改成 `asset_NNN.<ext>` 就 `0 errors`（实测对照）。`gate.py --fix-names` 一键改。
-24. **`FontAsset exportTypeValue="referenced"`** 是同一崩溃的第二诱因；缺这个属性表示 embedded，不要误报。
-25. **`rive pull` 在 1.8.0 必崩**，拆工程用 `rive create <dir> --from-rev=<x.rev>`；`rive push --name` 只接受 ASCII；**CLI 没有删除远程文件**的命令，联调草稿只能留在云端。
-26. **同一 id 在目标顶层、在来源画板内**（本案例 10 个 `CubicEaseInterpolator`）→ 合并会出重复 id、动画静默绑错对象；必须对已占用 id 重分配并重写子树引用。
-27. **`addSvgInstance` 静默丢弃内嵌 `<image>`**：矢量路径全在、位图 0 个 Image 节点、**不报错不告警**。位图必须 `upload_asset`(data URI) + `addImageInstance` 单独进；判据是数一遍 `types` 含 `Image` 的节点。
-28. **图片实例的 `x/y` 是原点位置**（`380/381` 默认 `50/50` 在中心），不是左上角 → 填 `left+w/2, top+h/2`；`addImageInstance` **不接宽高**、按位图原生像素进场 → 回写 `sx`(16)/`sy`(17)；新加对象默认**垫底** → `sendToFront`。
-29. **`clipPath` 不会被导入**：Rive 建出来的 Shape 是空的，圆角/异形遮罩必须在位图 alpha 里烘焙。`scripts/svg-prep.py clip` 直接把 clipPath 解成 `x,y,w,h,r`。
-30. **AI 的中文图层名会变成方块**：导出时写成逐字节字符引用（SVG 声明 `iso-8859-1`），落成 `0x80–0x9F` 控制字符 → 界面显示方块。只有**图层名是中文**的素材会中招，`rename_objects` 改回。
-31. **素材导入的验收是像素比对**：`.ai` 导 PNG24 当参考图，两侧 resize 到画板尺寸算平均差。实测正确 0.10–0.14/255、错位 2.5–3.2/255，阈值取 `0.5`。
-32. **`capture_artboard` 报 `has no drawable area`**：一是画板未激活（先 `focusArtboard`），二是该画板 `computedwidth/height`(810/811) 卡成 0 —— 写 w/h、`resizeArtboard`、改缩放都刷不回，**只能删画板重建**（重建时每步截图，即未再复现）。
-33. **`viewmodel_editor` 的写路径：命令齐全；崩溃非必现，但真崩过（2026-11-04 三次）**——官方命令确实存在：`createViewModels` / `addProperties` / `createViewModelInstances` / `bindViewModelToArtboard` / `databind`；配套 `path_editor.createParametricShapes`（建按钮形状）与 `create_listeners`（`click`/`down`/`up` + `viewModelChange`/`scripted`）。**不能宣称"MCP 建不了按钮"**。2026-11-05 一轮完整链路（建空壳 VM → addProperties → createViewModelInstances → bindViewModelToArtboard → databind 到 ScriptInput → 建 3 个按钮 → create_listeners click → reorder sendToFront）全部成功、未崩。做法：先存快照；按契约逐步调用并回读；崩一次就转 UI，别重试同一命令。
-33b. **导入慢要量，别猜**：一页 531 对象全链路实测 9.6 s（导出 4.9 / 写 Rive 4.0 / 后处理 0.65 / 验收 0.32）；`upload_asset`+`addSvgInstance` 占 36%，且都在解析同一份 SVG。**真正的瓶颈是"每次现写驱动脚本"** —— 同一批步骤现成脚本跑 9.6 s，实跑 65 s。优化驱动脚本（一条命令），不是优化任何单步。
-34. **位图的可见框 ≠ `<image>` 上的 `x/y/width/height`**：Figma 的 pattern 填充会叠 `clip-path` + `transform="rotate()"`。004 的车按 clip 矩形算出来是**空白**、按 `<image>` 矩形放**偏到画外**，真实可见框是 `(1623,153.5) 114.5×47.5`（`<image>` 写的是 `1751.82,53.45` + `rotate(89.815)`）。→ **别手算**：只放这一张图 + 全 `<defs>`，铺满画布透明渲染，取 alpha `getbbox()`。
-35. **裁完必须断言"不是空的"**：`getbbox()` 返回的是**该图自身像素坐标**，换算画布坐标时多乘一次缩放就会裁到画布外——`PIL` 不报错、补透明，得到**尺寸正确、内容全空**的 PNG。它一路都"成功"（资产 id 正常、节点建出、`810/811` 对得上），到编辑器里才看见空图层。判据 `alpha.max() == 0`。
-36. **导入卡在 `An SVG import is in progress` 的判据**：**读取类调用秒回**（`session_info`/`get_artboard_hierarchy`）、**渲染类全挂**（`addSvgInstance`/`capture_artboard`）= 编辑器主线程被占。两个真因：SVG 里有指向**已删除 `<mask>`** 的悬空引用；单份 SVG 太大（154 KB 实测拖死，拆成 4 份 26–62 KB 秒过）。`undo` 解不开，**只能重启桌面端**。
-37. **`capture_artboard` 对*所有*画板都报 `has no drawable area`** = **整机级离屏渲染故障**，不是某块画板的毛病（判据：连以前能截的对照画板也挂、所有画板 `810/811` 都是 0）。**别按旧结论"删画板重建"**——会白删好画板；它会自愈，本轮约 40 分钟后恢复。
-38. **像素验收的阈值是相对基线，不是常数 `0.5`**：先量「源 SVG vs 参考图」得到下限。004 基线 **1.40**、Rive 结果 **1.43** = PASS；拿绝对 `0.5` 判会把正确结果判成失败，然后去改一个本来没毛病的地方。
-39. **层序：新对象追加到 `children` 末尾，而 `children` 是 top→bottom**（所以"后加的"= 最底，"先加的"反而在上面）。→ **按"目标从上到下"顺序依次添加，层序自动正确**，不用逐个 `sendToFront`。事后调整用 `reorder_objects`，参数是 **`operations[]`** 而非 `objects`。代价：位图没法插回原组内部，只能整体在组之上。
-40. **SVG 的解析与转换在 Rive 服务端做**：报 `SVG conversion for asset X is unavailable` 就是这次转换失败，**同一资产重试无意义**，必须换新资产重传。等待是跨网络的，所以"慢"和"死"从外面看一模一样 → 用 `children` 里是否出现该组来判定结果。
-41. **服务端转换器不解析 `<use>`**：Figma 导出的图标与字形大量靠它。轻则那块内容消失，重则整份资产转换失败。必须本地展开成内联 `<g transform="translate(…)">` + 深拷贝（拷完去掉 `id`）。
-42. **`<use>` 展开后可能是空组**：它引用的字形轮廓躺在 `<font>` 里，而上游按"Rive 不消费 `<font>`"已经裁掉了。展开后 0 条 `path` 就是"字形残骸"，直接跳过——别反复重试（3 次 × 4 秒白等）。
-43. **`addImageInstance` 的返回可能没有 `nodeId`**，但节点确实建好了 → 回读 `children` 按 `name` 取 id，别对着 `None` 去写属性。
-44. **每组 SVG 不要携带整份 `<defs>`**：按 `url(#…)` / `href="#…"` 的引用闭包裁剪，只留本组走得到的。005 从 130–199 KB/组降到 1.3–1.8 KB，渲染结果一像素不差（MAE 0.012）。
-45. **无 `clip` / `transform` 的位图直接取原生像素**（`scale` 100%），既省一次隔离渲染、又不丢分辨率；只有带 `clip` + `rotate()` 的才需要"隔离渲染 + alpha bbox"。
-46. **开关按钮只关不开** → click 监听器挂的是 `viewModelChange` 常量（false），每次点击只会重复写同一个值。改用 `scripted` Listener Action 取反（`p.value = not p.value`）；旧 listener 可用 `delete_objects` 直接删；`animation_editor queryStateMachine` 回读 `actions[].scriptAssetId`，`script_diagnostics` 必须 `[]`。"全部显示"这类单向复位继续用 `viewModelChange`，常量值在 `BindablePropertyBoolean` 键 **634**。
-47. **MCP 没有建文本对象的命令** → 中文标签用 fontTools 轮廓 + 定尺寸 SVG + `addSvgInstance`。资产尺寸 = viewBox（88×44 按钮配 42×20 / 70×17）；SVG 变换落在子 `Group`（实测 42×20 标签 `sx≈8.59%`、`x≈22`），外层 `Node` 的 `810/811` 读回 0、轮廓顶点也取不到 → 落点只能用 `capture_artboard` 验收；不要在已缩放组里再套 `translate`（宽度会炸到 276px）。
-48. **路径光带整条不可见** → 填充多边形是逆时针（y 向下），0 error。顺时针绕序：`-n` 侧尾→头 → 头半圆 → `+n` 侧头→尾 → 尾半圆。
-49. **两个画板要用不同脚本/参数** → 共用同一个 `scriptAsset` 时改常量会互相影响。新建脚本用 `manage_scripts.create`（可带 content，借 `scripts/rive_mcp.py` 从本地文件读，避免把 28KB 塞进对话）；**MCP 没有 attach 接口，必须用户在目标画板右键添加脚本节点**。
-50. **右键新建脚本节点** → 默认落在画板中心 `(1280,720)`、最上层。要 `set_property_values` 到路径父级坐标（如 `1639,682`），再 `reorder_objects` 调到地图之上、UI 之下；`duplicate_objects` 不能复制 ScriptAsset（报 not a Component），同脚本可复制节点且不要改 848。
-51. **ScriptInputs 不能中文化** → 面板标签就是 ASCII 字段名（Luau 标识符不支持中文）；不要重命名 ScriptInput 对象，重编译会重建（实测 id `291-*`→`297-*`）。中文写源码注释；顺序用 `reorder_objects` 对输入子对象 `sendToFront`；数值键 **243**、布尔 **245**。
-52. **电流长度随车位置自适应** → `lenScale = clamp((dist/TOTAL)/0.5, 0, 1)`，`pulseLen = fxPulse*lenScale`；宽度渐变分母必须用实际 `head-tail`。50% 后保持 100%，`fxPulse` 仍是基础参数。（2026-11-09 定稿改为常值长度 + 缓动，见 57；本条保留为「长度随进度变化」的可选方案）
-53. **桌面端卡 `Compiling` 先分层，不要先查文件**：浏览器同文件正常、桌面端打开**别的文件也卡** → 客户端层。桌面端**不写运行日志**（`LocalCache` 只有 prefs + Sentry，正常时 breadcrumb 0 字节）；改量进程：CPU 持续增长 + IO≈0 = 本地在算，不是网络。
-54. **想"重载编辑器数据"删 `editorProperties` / 改 `fileSafeMode` 都无效**：`editorProperties` 打开文件即从文档重建（4 864 → 463 → 4 868 字节）；`fileSafeMode=true` 被客户端写回 `false`。本轮最终靠「卸载 + 删包数据 + 装最新版」恢复，但版本与安装方式两变量同时改变，**不能归因单项**。
-55. **改已有 listener 的 action**：~~没有 update 命令，只能删了重建~~ → **已被第 60 条取代**：可直接 `set_property_values` 改 `scriptAssetId`（键 `930`），删监听重建只作兜底。
-56. **`find_objects` 按节点名搜，中文是画面文字不是节点名**：本文件节点名是英文前缀，搜「沙 / 尘 / 全部」返回空；用 `BTN_` / `TXT_` 核对每画板各 3 条防重复副本。「全部开关」主开关语义 `next = not (sandOn and dustOn)`：两个都开才全关，否则全开。
-57. **电流"起步快、到车尾慢"不要改 `fxSpeed`**：那是总时长。存进度 `prog 0→1`，用 `0.25*p + 0.75*bezier(0.25,0.10,0.25,1.00)` 映射头部弧长；纯缓出末段斜率趋 0，会看起来"停住"，必须留 25% 线性保底。
-58. **Rive 没有羽化 clip**：`clipPath` 只有硬边。羽化 = 同一电流多边形做 N 层、`extra` 从 290 递减到 0、每层 alpha 7.5% 叠画下层图；成本 ≈ 蒙版面积 × 层数 × 电流条数，先压面积与条数再加层（660 + 双电流时 5 层就卡，290 + 单条时 8 层不卡）。
-59. **跨文件粘贴只丢脚本，不丢 ViewModel**：画板 / 图层 / 状态机 / 动画 / ViewModel 定义与实例、过渡条件里的 `viewModelId` 都会跟过去，唯独脚本资产不带——监听动作 `scriptAssetId` 变 `0-0`，点击无反应且不报错。修法：`manage_scripts` 重建 → `930` 重指 → 回读 + 预览点击；**不要重建 VM**（会多份同名，以 `conditions` 引用的 `viewModelId` 为准）。
-60. **ListenerAction 的 `scriptAssetId` 是键 `930`，可直接改**：与节点脚本的 `848` 不通用——`848` 改完不重绑（init 跑、draw 不来），`930` 改完立即生效（实测 12 个 click 监听一次性批量重指，`script_diagnostics == []`）；写字符串键 `scriptAssetId` 报 `invalid_property_key`。
-61. **"点击没反应"先排除编辑器卡顿**：本轮 12 个按钮"点不动"实为编辑器卡顿，预览恢复后同一批按钮全部正常；判定脚本问题前先重开预览。
-62. **换脚本画的素材（车/影子）只改脚本，别加图片节点**：`context:image('名')` 按**资产名**取、不带扩展名；`CAR_SCALE` = 目标显示长 ÷ 车身像素长；中心锚点用**车身 bbox 中心**而非图心（图心有留白会让车整体偏出去）；`ROT_OFF` 按车头朝向（上=90 / 右=0）；新图已烘影子则 `self.shadow=nil`。静态截图看不到脚本绘制的内容，验证靠 `script_diagnostics` + `read_console`（详见《车沿路径走（drawImage驱动）》§八）。
-63. **换素材后动画"不跳"，第一嫌疑是键打错对象**：旧节点通常只是被 `opacity=0` 藏起来，关键帧还留在它身上，新素材是它的**兄弟**。判据 = `queryKeyFrames` 的 `objectId` 不在新素材的祖先链上。**别靠 reparent 进旧节点"继承"动画**——旧节点 `opacity=0`，塞进去连新素材一起隐藏（详见《换素材后动画不生效》）。
-64. **缩放素材前先移锚点**：SVG / Image 实例的 `x/y` 是**左上角**不是中心，直接放大就往右下长；给位于 `(0,0)` 的**外层组**打缩放是绕**画板原点**，内容直接飞出画板。正解：被缩放节点的原点 = 素材几何 bbox 视觉中心，直接子节点反向平移抵消（世界坐标不变）。
-65. **只改结构的操作要用「零位移证明」验收**：改前改后各 `capture_artboard` 一次、逐像素 `max diff` 必须 `= 0`。前提是截图取在静止帧（第 0 帧），否则动画相位不同会误判。
-66. **径向扩散环别逐帧重建几何**：`init` 建**一枚圆 + 一条 `Gradient.radial`**，之后只靠 `Mat2D.withScale` 缩放；渐变半径要 **×√2**（CSS `radial-gradient(circle)` 的 100% 在**最远角**，圆边界在 `1/√2`）；单环透明度用 `save → modulateOpacity(op) → restore`（脚本**没有** `globalAlpha`），不要为透明度去建 alpha 分桶。
-67. **双击 Rive 没反应、进程 1 秒内退出，先查僵尸进程**：上一轮留下的 `RiveEarlyAccess` 可能窗口已销毁但进程还在（`MainWindowHandle=0`、`StartTime` 是很早以前、`CPU` 还在涨），它占着单实例锁，新进程初始化完原生层就退出。结束该进程再启动（本轮实测 1.1 秒出窗，详见《桌面端打不开排查》）。
-68. **别用「直接运行 `WindowsApps` 下的 exe」判断应用坏没坏**：没有包身份时会自行退出（实测 0.32 秒、stderr 无异常）；启动测试要用 `shell:AppsFolder\<包族名>!riveeditor` 激活。
-69. **`path_editor.createShapes` 建的路径默认 `isclosed=true`**：弧线/缺口形状会被自动闭合，缺口被填满并伸出边界；必须显式设开放路径。端点角度用真实顶点 `atan2` 反算，截图像素扫描估算会偏 3–4°（详见《效果-icon图形填充》）。
-70. **做"从下往上填满"不要用顶点动画**（压缩顶点会让形状变形、像图像翻转）：用**垂直线性渐变 + 两个同位置 stop 形成硬切液面**，动画 stop position `100→0`；描边环用原生 trim 绕行（`114/115/116` = trimStart/End/Offset），平头 cap 防越界。
-71. **给设计/开发交付"什么时间做什么"，用一页 SVG 定义表**：统一时间栅格（秒→x 固定换算）、竖线贯穿全表即事件时刻、方块内必标曲线、事件标签带秒数、属性写起止百分比、按首个事件时间排序（详见《动态效果定义表-SVG》）。
+
+> **第 13 条起（共 60 条）见 @rules/结论与坑.md** —— 编号保持原样，与「坑位 N」引用一致，别在这里重排。
 
 ## FAQ 路由
 
@@ -129,7 +71,7 @@
 
 **任何 MCP 工具调用的 `data` 结构，必须先离线读契约再发**（`probe/tools.json` 里每个工具的 `inputSchema.properties.data` 就是完整契约，不需要 Rive 运行）。猜错形状的代价是分级的：
 
-- 轻则**静默丢弃**：字段被忽略、返回 success 但什么都没发生（坑位 33：createViewModels 内联 properties）；
+- 轻则**静默丢弃**：字段被忽略、返回 success 但什么都没发生（坑位 33：createViewModels 内联 properties，见 @rules/结论与坑.md）；
 - 重则**编辑器闪退**：用户丢历史、全链路返工（2026-11-04 实测两次：addProperties 猜形状直接崩）。
 
 流程：**读 schema → 按契约发 → 回读验证**。三步缺一不可。

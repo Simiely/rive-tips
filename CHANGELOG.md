@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v1.14.1 — 2026-11-18
+
+文档维护：`AGENTS.md` 171 → 113 行（规范 2.1.4 的 150 行门面阈值，kit 2.9.0 起 `AGENTS_TOO_LONG` 会硬拦）。
+
+### 变更
+
+- 「结论先行」第 **13–71 条**（含 33b，共 60 条）**原样迁入** [`rules/结论与坑.md`](rules/结论与坑.md)，
+  **编号不变**——与 `docs/速查表.md`、`skills/rive-ops/SKILL.md` 的「坑位 N」仍是同一套编号；
+  第 1–12 条留在 `AGENTS.md` 当入口，新增条目加在 rules 文件末尾接着编号
+- `schema/taxonomy.json` 把 `rules/**` 纳入扫描并豁免 frontmatter
+- `docs/` 与 `skills/` 一字未动：`tools/sync-skill.ps1 -Check` 仍为 39 references + 6 scripts、0 dead links
+- 验收：`REPO CHECK: PASS`（ERROR=0、WARN=0）；逐行比对 146 行非空内容零丢失（仅「坑位 33」那行加了指引）
+
 ## v1.14.0 — 2026-11-16
 
 补一篇动效交付规范（动态效果定义表 SVG）、一篇图标填充效果、一节关键帧曲线编辑。来源是「003 充电中」充电图标填充效果的完整实现与 6 版表格迭代。
